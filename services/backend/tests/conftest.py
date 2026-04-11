@@ -32,7 +32,7 @@ from app.core.auth import verify_token
 from app.core.config import get_settings
 from app.models.models import Base, User
 
-fake = Faker("de_DE")  # German locale for realistic test data
+fake = Faker("en_US")  # English locale for realistic test data
 
 
 # =============================================================================
