@@ -11,17 +11,20 @@
 #   4. Define startup/shutdown lifecycle hooks
 # =============================================================================
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from prometheus_fastapi_instrumentator import Instrumentator
 import structlog
 
+import httpx
+from sqlalchemy import text
+
 from app.core.config import get_settings
-from app.db.database import init_db
+from app.db.database import init_db, AsyncSessionLocal
 from app.services.storage import storage_service
 from app.services.vector_store import vector_store
-from app.api.routes import sources
+from app.api.routes import sources, search
 
 log = structlog.get_logger()
 settings = get_settings()
@@ -111,8 +114,7 @@ Instrumentator().instrument(app).expose(app, endpoint="/metrics")
 # =============================================================================
 
 app.include_router(sources.router, prefix="/api/sources")
-# These will be added in the next sessions:
-# app.include_router(search.router, prefix="/api/search")
+app.include_router(search.router, prefix="/api/search")
 # app.include_router(chat.router, prefix="/api/chat")
 
 
@@ -135,13 +137,38 @@ async def health_ready():
     Readiness check — only returns 200 if all dependencies are reachable.
     K8s stops sending traffic to this pod if this fails.
     """
-    # In production, we'd check DB connection, Milvus, Ollama here.
-    # For now, simple response.
-    return {
-        "status": "ready",
-        "dependencies": {
-            "postgres": "ok",
-            "milvus": "ok",
-            "ollama": "ok",
-        }
-    }
+    checks = {}
+
+    # Postgres
+    try:
+        async with AsyncSessionLocal() as session:
+            await session.execute(text("SELECT 1"))
+        checks["postgres"] = "ok"
+    except Exception as e:
+        checks["postgres"] = f"error: {e}"
+
+    # Milvus
+    try:
+        if vector_store.collection is not None:
+            _ = vector_store.collection.num_entities
+            checks["milvus"] = "ok"
+        else:
+            checks["milvus"] = "error: not connected"
+    except Exception as e:
+        checks["milvus"] = f"error: {e}"
+
+    # Ollama
+    try:
+        resp = httpx.get(f"{settings.ollama_base_url}/api/tags", timeout=5)
+        resp.raise_for_status()
+        checks["ollama"] = "ok"
+    except Exception as e:
+        checks["ollama"] = f"error: {e}"
+
+    if any(v != "ok" for v in checks.values()):
+        raise HTTPException(
+            status_code=503,
+            detail={"status": "not ready", "dependencies": checks},
+        )
+
+    return {"status": "ready", "dependencies": checks}
