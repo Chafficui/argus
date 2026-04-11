@@ -1,0 +1,387 @@
+# =============================================================================
+# ARGUS — values.yaml
+# =============================================================================
+# This is the single source of truth for your entire deployment.
+# Every value here can be overridden with:
+#   helm install argus ./charts/argus --set someKey=someValue
+#
+# For production, you'd have a values-prod.yaml that overrides secrets etc.
+# =============================================================================
+
+# ----------------------------------------------------------------------------
+# GLOBAL settings — shared across all services
+# ----------------------------------------------------------------------------
+global:
+  # The namespace everything lives in
+  namespace: argus
+
+  # Your container registry (where Docker images are stored)
+  # For local dev, we use local images. For prod, this would be e.g. registry.gitlab.com/yourname/argus
+  imageRegistry: ""
+
+  # Image pull policy:
+  # - Always: always pull from registry (good for prod)
+  # - IfNotPresent: use local cache if available (good for dev)
+  imagePullPolicy: IfNotPresent
+
+  # Storage class for persistent volumes (disk storage for databases etc.)
+  # "local-path" is the default for k3s. On a real cluster this might be "gp3" (AWS) or "standard" (GKE)
+  storageClass: "local-path"
+
+# ----------------------------------------------------------------------------
+# BACKEND — FastAPI Python service
+# ----------------------------------------------------------------------------
+backend:
+  enabled: true
+  replicaCount: 1  # How many copies to run. In prod you'd set this to 2+ for redundancy.
+
+  image:
+    repository: argus-backend
+    tag: latest
+
+  service:
+    port: 8000  # The port FastAPI listens on
+
+  # Resource limits — THIS is what the job posting meant by "Dimensionierung von Kubernetes-Ressourcen"
+  # K8s uses these to decide which node to schedule the pod on, and to prevent runaway processes.
+  resources:
+    requests:
+      cpu: "250m"       # 250 millicores = 0.25 CPU cores (minimum guaranteed)
+      memory: "512Mi"   # 512 Megabytes RAM (minimum guaranteed)
+    limits:
+      cpu: "1000m"      # 1 full CPU core (hard cap — process gets throttled above this)
+      memory: "1Gi"     # 1 Gigabyte RAM (hard cap — pod gets killed above this)
+
+  # Environment variables injected into the container
+  env:
+    LOG_LEVEL: "info"
+    MILVUS_HOST: "argus-milvus"
+    MILVUS_PORT: "19530"
+    POSTGRES_HOST: "argus-postgresql"
+    POSTGRES_PORT: "5432"
+    POSTGRES_DB: "argus"
+    MINIO_ENDPOINT: "argus-minio:9000"
+    KEYCLOAK_URL: "http://argus-keycloak/realms/argus"
+    OLLAMA_BASE_URL: "http://argus-ollama:11434"
+
+  # Secrets are NOT stored in values.yaml directly (never commit secrets to git!)
+  # They reference Kubernetes Secret objects instead
+  envFromSecrets:
+    - secretName: argus-backend-secrets
+      keys:
+        - POSTGRES_PASSWORD
+        - MINIO_ACCESS_KEY
+        - MINIO_SECRET_KEY
+        - SECRET_KEY
+
+# ----------------------------------------------------------------------------
+# CRAWLER — Playwright-based source monitoring service
+# ----------------------------------------------------------------------------
+crawler:
+  enabled: true
+  replicaCount: 1
+
+  image:
+    repository: argus-crawler
+    tag: latest
+
+  resources:
+    requests:
+      cpu: "500m"     # Crawling is CPU-intensive (rendering pages with Playwright)
+      memory: "1Gi"
+    limits:
+      cpu: "2000m"    # Allow bursting to 2 cores during heavy crawl jobs
+      memory: "2Gi"
+
+  # How often to run crawl jobs (cron syntax: minute hour day month weekday)
+  schedule: "0 */6 * * *"  # Every 6 hours
+
+  env:
+    BACKEND_URL: "http://argus-backend:8000"
+    MAX_CONCURRENT_PAGES: "5"
+    REQUEST_TIMEOUT_MS: "30000"
+
+# ----------------------------------------------------------------------------
+# FRONTEND — React app served via Nginx
+# ----------------------------------------------------------------------------
+frontend:
+  enabled: true
+  replicaCount: 1
+
+  image:
+    repository: argus-frontend
+    tag: latest
+
+  service:
+    port: 80
+
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "128Mi"
+    limits:
+      cpu: "200m"
+      memory: "256Mi"
+
+  env:
+    VITE_API_URL: "http://localhost/api"
+    VITE_KEYCLOAK_URL: "http://localhost/auth"
+    VITE_KEYCLOAK_REALM: "argus"
+    VITE_KEYCLOAK_CLIENT_ID: "argus-frontend"
+
+# ----------------------------------------------------------------------------
+# OLLAMA — Local LLM inference (runs models like Llama 3, Mistral on your hardware)
+# This is what makes it truly On-Premise: no OpenAI API calls, everything local.
+# ----------------------------------------------------------------------------
+ollama:
+  enabled: true
+  replicaCount: 1
+
+  image:
+    repository: ollama/ollama
+    tag: latest
+
+  service:
+    port: 11434
+
+  # The model to pull on startup
+  defaultModel: "llama3.2"
+
+  resources:
+    requests:
+      cpu: "1000m"
+      memory: "4Gi"
+    limits:
+      cpu: "4000m"
+      memory: "8Gi"
+      # GPU resource — this is how you request GPU access in K8s
+      # nvidia.com/gpu: "1"  # Uncomment if you have a GPU node
+
+  persistence:
+    enabled: true
+    size: "20Gi"  # Models are large — Llama 3.2 is ~2GB, larger models can be 40GB+
+    storageClass: "local-path"
+
+# ----------------------------------------------------------------------------
+# KEYCLOAK — Identity & Access Management (IAM)
+# Handles login, user management, OAuth2/OIDC tokens
+# This is what enterprises use instead of rolling their own auth.
+# ----------------------------------------------------------------------------
+keycloak:
+  enabled: true
+
+  # These values are passed to the official Bitnami Keycloak Helm chart
+  auth:
+    adminUser: admin
+    # In prod: use a Kubernetes Secret, not a plain value here
+    adminPassword: "changeme-in-prod"
+
+  postgresql:
+    enabled: false  # We use our shared PostgreSQL instance instead
+
+  externalDatabase:
+    host: argus-postgresql
+    port: 5432
+    database: keycloak
+    user: keycloak
+    existingSecret: argus-keycloak-db-secret
+    existingSecretPasswordKey: password
+
+  resources:
+    requests:
+      cpu: "500m"
+      memory: "1Gi"
+    limits:
+      cpu: "1000m"
+      memory: "2Gi"
+
+# ----------------------------------------------------------------------------
+# MILVUS — Vector Database
+# Stores embeddings (numerical representations of text) for semantic search.
+# When you ask "find sources about climate change", it doesn't search for the
+# exact words — it finds semantically similar content via vector similarity.
+# ----------------------------------------------------------------------------
+milvus:
+  enabled: true
+
+  cluster:
+    enabled: false  # Single-node for dev. Set true for prod cluster mode.
+
+  persistence:
+    persistentVolumeClaim:
+      storageClass: "local-path"
+      size: "10Gi"
+
+  resources:
+    requests:
+      cpu: "500m"
+      memory: "2Gi"
+    limits:
+      cpu: "2000m"
+      memory: "4Gi"
+
+# ----------------------------------------------------------------------------
+# POSTGRESQL — Relational Database
+# Stores structured data: users, monitored sources, crawl job history, metadata.
+# ----------------------------------------------------------------------------
+postgresql:
+  enabled: true
+
+  auth:
+    database: argus
+    username: argus
+    existingSecret: argus-postgres-secret
+    secretKeys:
+      adminPasswordKey: postgres-password
+      userPasswordKey: password
+
+  primary:
+    persistence:
+      enabled: true
+      size: "10Gi"
+      storageClass: "local-path"
+
+    resources:
+      requests:
+        cpu: "250m"
+        memory: "256Mi"
+      limits:
+        cpu: "1000m"
+        memory: "1Gi"
+
+# ----------------------------------------------------------------------------
+# MINIO — Object Storage (like S3, but self-hosted)
+# Stores raw crawled documents, PDFs, HTML snapshots before they're processed.
+# This is the "Objektspeicher" mentioned in the job posting.
+# ----------------------------------------------------------------------------
+minio:
+  enabled: true
+
+  auth:
+    existingSecret: argus-minio-secret
+    secretKeys:
+      rootUserKey: root-user
+      rootPasswordKey: root-password
+
+  defaultBuckets: "argus-raw-docs,argus-processed"
+
+  persistence:
+    enabled: true
+    size: "20Gi"
+    storageClass: "local-path"
+
+  resources:
+    requests:
+      cpu: "250m"
+      memory: "512Mi"
+    limits:
+      cpu: "1000m"
+      memory: "1Gi"
+
+# ----------------------------------------------------------------------------
+# OBSERVABILITY — Prometheus + Grafana + Loki
+# The entire monitoring stack in one block.
+# Prometheus: collects metrics (CPU, RAM, request rates, error rates...)
+# Grafana: visualizes those metrics in dashboards
+# Loki: collects and indexes logs from all services
+# ----------------------------------------------------------------------------
+observability:
+  enabled: true
+
+  # kube-prometheus-stack settings
+  kube-prometheus-stack:
+    grafana:
+      enabled: true
+      adminPassword: "changeme-in-prod"
+      persistence:
+        enabled: true
+        size: "2Gi"
+        storageClass: "local-path"
+
+      # Pre-load our custom Argus dashboard automatically
+      dashboardProviders:
+        dashboardproviders.yaml:
+          apiVersion: 1
+          providers:
+            - name: argus
+              orgId: 1
+              folder: Argus
+              type: file
+              options:
+                path: /var/lib/grafana/dashboards/argus
+
+    prometheus:
+      prometheusSpec:
+        retention: "30d"  # Keep 30 days of metrics history
+        resources:
+          requests:
+            cpu: "250m"
+            memory: "512Mi"
+          limits:
+            cpu: "1000m"
+            memory: "2Gi"
+        storageSpec:
+          volumeClaimTemplate:
+            spec:
+              storageClassName: "local-path"
+              accessModes: ["ReadWriteOnce"]
+              resources:
+                requests:
+                  storage: "20Gi"
+
+  # Loki settings
+  loki-stack:
+    loki:
+      enabled: true
+      persistence:
+        enabled: true
+        size: "10Gi"
+        storageClass: "local-path"
+    promtail:
+      enabled: true  # Promtail is the log collector — runs on every node, ships logs to Loki
+
+# ----------------------------------------------------------------------------
+# INGRESS — The "front door" of the cluster
+# Routes external HTTP traffic to the right internal service.
+# Without this, nothing is reachable from outside the cluster.
+# ----------------------------------------------------------------------------
+ingress:
+  enabled: true
+  className: "nginx"  # k3s comes with Traefik by default, but nginx is more common in enterprise
+
+  # TLS/HTTPS config — in prod you'd use cert-manager to auto-issue Let's Encrypt certs
+  tls:
+    enabled: false  # Set to true in prod with a real domain
+    secretName: argus-tls
+
+  host: "argus.local"  # For local dev, add this to /etc/hosts
+
+  # URL routing rules:
+  routes:
+    - path: /
+      service: argus-frontend
+      port: 80
+    - path: /api
+      service: argus-backend
+      port: 8000
+    - path: /auth
+      service: argus-keycloak
+      port: 80
+    - path: /grafana
+      service: argus-grafana
+      port: 3000
+
+# ----------------------------------------------------------------------------
+# NETWORK POLICIES — "On-Premise / Security" from the job posting
+# These are K8s firewall rules. They define which pods are allowed to talk
+# to which other pods. By default in K8s, all pods can talk to each other —
+# that's a security risk in enterprise environments.
+# ----------------------------------------------------------------------------
+networkPolicies:
+  enabled: true
+  # When enabled, our templates/network-policies.yaml will create rules like:
+  # - Backend can talk to: Postgres, Milvus, MinIO, Ollama, Keycloak
+  # - Frontend can talk to: Backend only
+  # - Crawler can talk to: Backend, MinIO
+  # - Prometheus can talk to: all pods (needs to scrape metrics from everyone)
+  # - External traffic: only via Ingress

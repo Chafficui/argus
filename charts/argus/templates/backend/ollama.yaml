@@ -1,0 +1,142 @@
+# =============================================================================
+# backend/ollama.yaml
+# =============================================================================
+# Ollama is the local LLM inference engine.
+# It runs models like Llama 3, Mistral, Phi-3 entirely on your own hardware —
+# no API calls to OpenAI, no data leaving the building.
+#
+# This is the CORE of the "On-Premise" requirement in the job posting.
+# Enterprise clients (especially in public sector, finance, defence) often
+# CANNOT send data to external APIs due to data protection laws.
+#
+# Ollama exposes an OpenAI-compatible API at /api/chat and /v1/chat/completions
+# → Our backend talks to Ollama exactly like it would talk to OpenAI,
+#   just with the base URL pointing to http://argus-ollama:11434
+# =============================================================================
+
+{{- if .Values.ollama.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: argus-ollama
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: argus-ollama
+    app.kubernetes.io/name: argus-ollama
+    app.kubernetes.io/part-of: argus
+spec:
+  replicas: {{ .Values.ollama.replicaCount }}
+  selector:
+    matchLabels:
+      app: argus-ollama
+  template:
+    metadata:
+      labels:
+        app: argus-ollama
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "11434"
+        prometheus.io/path: "/metrics"
+    spec:
+      # initContainer: pulls the default model on first startup
+      # This is like running "ollama pull llama3.2" but inside the pod
+      initContainers:
+        - name: pull-model
+          image: ollama/ollama:latest
+          command:
+            - sh
+            - -c
+            - |
+              # Start ollama in background
+              ollama serve &
+              OLLAMA_PID=$!
+              # Wait for it to be ready
+              sleep 5
+              # Pull the model
+              echo "Pulling model: {{ .Values.ollama.defaultModel }}"
+              ollama pull {{ .Values.ollama.defaultModel }}
+              echo "Model ready!"
+              # Stop the background process
+              kill $OLLAMA_PID
+          volumeMounts:
+            - name: ollama-data
+              mountPath: /root/.ollama  # Ollama stores models here
+
+      containers:
+        - name: ollama
+          image: {{ .Values.ollama.image.repository }}:{{ .Values.ollama.image.tag }}
+          imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+
+          ports:
+            - containerPort: 11434
+              name: http
+
+          resources:
+            {{- toYaml .Values.ollama.resources | nindent 12 }}
+
+          env:
+            - name: OLLAMA_HOST
+              value: "0.0.0.0"  # Listen on all interfaces (required inside container)
+            - name: OLLAMA_MODELS
+              value: "/root/.ollama/models"
+
+          volumeMounts:
+            - name: ollama-data
+              mountPath: /root/.ollama
+
+          livenessProbe:
+            httpGet:
+              path: /api/tags  # Returns list of available models — good health check
+              port: 11434
+            initialDelaySeconds: 60  # Models take time to load on startup
+            periodSeconds: 30
+            timeoutSeconds: 10
+
+          readinessProbe:
+            httpGet:
+              path: /api/tags
+              port: 11434
+            initialDelaySeconds: 30
+            periodSeconds: 10
+
+      volumes:
+        - name: ollama-data
+          # PersistentVolumeClaim: requests storage from K8s
+          # Without this, models would be re-downloaded every time the pod restarts
+          persistentVolumeClaim:
+            claimName: argus-ollama-pvc
+
+---
+# PersistentVolumeClaim — requests a chunk of storage from the cluster
+# K8s then provisions actual disk storage (on local-path in dev, or cloud storage in prod)
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: argus-ollama-pvc
+  namespace: {{ .Values.global.namespace }}
+spec:
+  accessModes:
+    - ReadWriteOnce  # Only one pod can mount this at a time (fine for single Ollama instance)
+  storageClassName: {{ .Values.global.storageClass }}
+  resources:
+    requests:
+      storage: {{ .Values.ollama.persistence.size }}
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: argus-ollama
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app.kubernetes.io/name: argus-ollama
+spec:
+  selector:
+    app: argus-ollama
+  ports:
+    - name: http
+      port: 11434
+      targetPort: 11434
+  type: ClusterIP
+
+{{- end }}

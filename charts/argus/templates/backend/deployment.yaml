@@ -1,0 +1,141 @@
+# =============================================================================
+# backend/deployment.yaml
+# =============================================================================
+# A Deployment tells Kubernetes:
+# "Run X copies of this container. If one crashes, restart it automatically.
+#  If I push a new image, roll it out without downtime."
+# =============================================================================
+
+{{- if .Values.backend.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: argus-backend
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app.kubernetes.io/name: argus-backend
+    app.kubernetes.io/part-of: argus
+spec:
+  # How many pod copies to run
+  replicas: {{ .Values.backend.replicaCount }}
+
+  # selector: tells the Deployment which pods it "owns"
+  # This must match the labels in template.metadata.labels below
+  selector:
+    matchLabels:
+      app: argus-backend
+
+  strategy:
+    # RollingUpdate: starts new pods before killing old ones = zero downtime
+    # Recreate: kills all old pods first, then starts new ones = brief downtime
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1        # Allow 1 extra pod during update
+      maxUnavailable: 0  # Never have 0 running pods during update
+
+  template:
+    metadata:
+      labels:
+        app: argus-backend
+        app.kubernetes.io/name: argus-backend
+      annotations:
+        # This annotation tells Prometheus to scrape metrics from this pod
+        # Our FastAPI app will expose /metrics endpoint with response times, error rates etc.
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+        prometheus.io/path: "/metrics"
+    spec:
+      # initContainers run BEFORE the main container starts.
+      # Here we wait until PostgreSQL is ready — otherwise the backend would crash on startup.
+      initContainers:
+        - name: wait-for-postgres
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              echo "Waiting for PostgreSQL..."
+              until nc -z argus-postgresql 5432; do
+                sleep 2
+              done
+              echo "PostgreSQL is ready!"
+        - name: wait-for-milvus
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              echo "Waiting for Milvus..."
+              until nc -z argus-milvus 19530; do
+                sleep 2
+              done
+              echo "Milvus is ready!"
+
+      containers:
+        - name: backend
+          image: {{ .Values.global.imageRegistry }}{{ .Values.backend.image.repository }}:{{ .Values.backend.image.tag }}
+          imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+
+          ports:
+            - containerPort: 8000
+              name: http
+
+          # Resource requests and limits (from values.yaml)
+          resources:
+            {{- toYaml .Values.backend.resources | nindent 12 }}
+
+          # Plain environment variables
+          env:
+            {{- range $key, $val := .Values.backend.env }}
+            - name: {{ $key }}
+              value: {{ $val | quote }}
+            {{- end }}
+
+          # Secret environment variables (loaded from K8s Secrets)
+          envFrom:
+            - secretRef:
+                name: argus-backend-secrets
+
+          # Health checks — K8s uses these to know if the pod is actually working
+          # If livenessProbe fails repeatedly → pod gets restarted
+          # If readinessProbe fails → pod gets removed from load balancer (stops receiving traffic)
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 30  # Wait 30s after start before first check
+            periodSeconds: 10         # Check every 10 seconds
+            failureThreshold: 3       # Restart after 3 consecutive failures
+
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 5
+
+---
+# =============================================================================
+# A Service gives the Deployment a stable internal DNS name.
+# Other pods reach the backend at: http://argus-backend:8000
+# Even if pods restart and get new IPs, the Service IP stays the same.
+# =============================================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: argus-backend
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app.kubernetes.io/name: argus-backend
+    app.kubernetes.io/part-of: argus
+spec:
+  selector:
+    app: argus-backend  # Routes traffic to pods with this label
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000
+  type: ClusterIP  # ClusterIP = only reachable inside the cluster (not from outside)
+                   # The Ingress below is what makes it reachable from the internet
+
+{{- end }}

@@ -1,0 +1,52 @@
+apiVersion: v2
+name: argus
+description: |
+  Argus — Enterprise AI Research Platform.
+  Self-hosted, agent-based source monitoring and RAG search.
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+
+keywords:
+  - ai
+  - rag
+  - llm
+  - enterprise
+  - on-premise
+
+maintainers:
+  - name: Felix
+    email: felix@codai.dev
+
+# Dependencies: external Helm charts we reuse instead of writing ourselves.
+# Think of these like npm packages — we declare them here, Helm downloads them.
+dependencies:
+  - name: keycloak
+    version: "21.4.1"
+    repository: "https://charts.bitnami.com/bitnami"
+    condition: keycloak.enabled
+
+  - name: milvus
+    version: "4.2.4"
+    repository: "https://zilliztech.github.io/milvus-helm"
+    condition: milvus.enabled
+
+  - name: postgresql
+    version: "15.5.20"
+    repository: "https://charts.bitnami.com/bitnami"
+    condition: postgresql.enabled
+
+  - name: minio
+    version: "14.6.16"
+    repository: "https://charts.bitnami.com/bitnami"
+    condition: minio.enabled
+
+  - name: kube-prometheus-stack
+    version: "61.3.2"
+    repository: "https://prometheus-community.github.io/helm-charts"
+    condition: observability.enabled
+
+  - name: loki-stack
+    version: "2.10.2"
+    repository: "https://grafana.github.io/helm-charts"
+    condition: observability.enabled

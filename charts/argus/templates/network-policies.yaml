@@ -1,0 +1,213 @@
+# =============================================================================
+# network-policies.yaml
+# =============================================================================
+# NetworkPolicies are Kubernetes firewall rules.
+#
+# By default, ALL pods in a cluster can talk to ALL other pods.
+# In enterprise/security-critical environments, this is unacceptable.
+#
+# These policies implement "default deny" + explicit allow rules:
+# → No pod can receive traffic unless a policy explicitly allows it.
+# → This is the "IT-Security-Abstimmung" mentioned in the job posting.
+#
+# Real-world analogy: it's like a strict office building where every door
+# is locked by default, and you need a key card for each specific door.
+# =============================================================================
+
+{{- if .Values.networkPolicies.enabled }}
+
+---
+# DEFAULT DENY ALL
+# This policy selects all pods in the namespace and allows NO ingress/egress.
+# Everything below this will punch specific holes in this wall.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+  namespace: {{ .Values.global.namespace }}
+spec:
+  podSelector: {}  # Empty selector = matches ALL pods in namespace
+  policyTypes:
+    - Ingress
+    - Egress
+
+---
+# Allow DNS resolution for all pods
+# Without this, pods can't resolve hostnames like "argus-postgresql" → IP
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-dns
+  namespace: {{ .Values.global.namespace }}
+spec:
+  podSelector: {}
+  policyTypes:
+    - Egress
+  egress:
+    - ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+
+---
+# BACKEND: what it's allowed to talk to
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: backend-egress
+  namespace: {{ .Values.global.namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      app: argus-backend
+  policyTypes:
+    - Egress
+  egress:
+    # PostgreSQL
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: argus-postgresql
+      ports:
+        - port: 5432
+    # Milvus
+    - to:
+        - podSelector:
+            matchLabels:
+              app: argus-milvus
+      ports:
+        - port: 19530
+    # MinIO
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: argus-minio
+      ports:
+        - port: 9000
+    # Keycloak (for token validation)
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: keycloak
+      ports:
+        - port: 8080
+    # Ollama (local LLM)
+    - to:
+        - podSelector:
+            matchLabels:
+              app: argus-ollama
+      ports:
+        - port: 11434
+
+---
+# BACKEND: who can talk to it
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: backend-ingress
+  namespace: {{ .Values.global.namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      app: argus-backend
+  policyTypes:
+    - Ingress
+  ingress:
+    # Only frontend and crawler can reach the backend
+    - from:
+        - podSelector:
+            matchLabels:
+              app: argus-frontend
+        - podSelector:
+            matchLabels:
+              app: argus-crawler
+      ports:
+        - port: 8000
+    # Prometheus can scrape metrics from the backend
+    - from:
+        - podSelector:
+            matchLabels:
+              app: prometheus
+      ports:
+        - port: 8000
+    # Ingress controller (nginx) routes external traffic to backend
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+
+---
+# CRAWLER: what it can talk to
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: crawler-egress
+  namespace: {{ .Values.global.namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      app: argus-crawler
+  policyTypes:
+    - Egress
+  egress:
+    # Backend API
+    - to:
+        - podSelector:
+            matchLabels:
+              app: argus-backend
+      ports:
+        - port: 8000
+    # MinIO for storing raw crawled docs
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: argus-minio
+      ports:
+        - port: 9000
+    # External internet (needs to crawl websites!)
+    # In high-security environments you'd proxy this through a controlled egress
+    - ports:
+        - port: 80
+        - port: 443
+
+---
+# FRONTEND: only talks to backend
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: frontend-egress
+  namespace: {{ .Values.global.namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      app: argus-frontend
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app: argus-backend
+      ports:
+        - port: 8000
+
+---
+# PROMETHEUS: needs to scrape all pods
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: prometheus-scrape
+  namespace: {{ .Values.global.namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      app: prometheus
+  policyTypes:
+    - Egress
+  egress:
+    # Can reach all pods in the namespace for metric scraping
+    - to:
+        - podSelector: {}
+
+{{- end }}

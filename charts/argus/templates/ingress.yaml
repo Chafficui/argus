@@ -1,0 +1,102 @@
+# =============================================================================
+# ingress.yaml
+# =============================================================================
+# The Ingress is the "front door" of the entire cluster.
+# It's a reverse proxy that routes external HTTP/HTTPS traffic to the right
+# internal service based on the URL path.
+#
+# Without Ingress:
+#   User → ??? → somehow reach argus-backend:8000 (not possible from outside)
+#
+# With Ingress:
+#   User → argus.local/ → Ingress → argus-frontend:80
+#   User → argus.local/api → Ingress → argus-backend:8000
+#   User → argus.local/auth → Ingress → keycloak:8080
+#   User → argus.local/grafana → Ingress → grafana:3000
+#
+# This is the "Steuerung von Microservice-Workloads (Ingress/Egress)"
+# from the job posting.
+# =============================================================================
+
+{{- if .Values.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: argus-ingress
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app.kubernetes.io/name: argus
+    app.kubernetes.io/part-of: argus
+  annotations:
+    # These annotations configure nginx behavior:
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+
+    # Enable CORS so the React frontend can call the API
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "*"
+
+    # Increase timeout for LLM requests (inference can take 30-60s)
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "120"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "120"
+
+    # Max upload size (for document uploads)
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+
+    {{- if .Values.ingress.tls.enabled }}
+    # Auto-redirect HTTP to HTTPS
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    {{- end }}
+
+spec:
+  ingressClassName: {{ .Values.ingress.className }}
+
+  {{- if .Values.ingress.tls.enabled }}
+  tls:
+    - hosts:
+        - {{ .Values.ingress.host }}
+      secretName: {{ .Values.ingress.tls.secretName }}
+  {{- end }}
+
+  rules:
+    - host: {{ .Values.ingress.host }}
+      http:
+        paths:
+          # API backend — /api/* routes to FastAPI
+          - path: /api(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: argus-backend
+                port:
+                  number: 8000
+
+          # Keycloak auth — /auth/* routes to Keycloak
+          - path: /auth(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: argus-keycloak
+                port:
+                  number: 80
+
+          # Grafana dashboard — /grafana/* routes to Grafana
+          - path: /grafana(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: argus-grafana
+                port:
+                  number: 3000
+
+          # Frontend — everything else goes to React app
+          # This must be LAST so it acts as a catch-all
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: argus-frontend
+                port:
+                  number: 80
+
+{{- end }}
