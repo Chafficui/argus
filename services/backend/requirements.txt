@@ -5,36 +5,37 @@
 # Install with: pip install -r requirements.txt
 
 # --- Web Framework ---
-fastapi==0.115.0          # The web framework — like Express but for Python
-uvicorn[standard]==0.30.6 # The server that runs FastAPI (like Node.js runtime)
-pydantic==2.9.0           # Data validation — defines the "shape" of requests/responses
-pydantic-settings==2.5.2  # Reads config from environment variables automatically
+fastapi==0.135.3          # The web framework — like Express but for Python
+uvicorn[standard]==0.44.0 # The server that runs FastAPI (like Node.js runtime)
+pydantic==2.12.5          # Data validation — defines the "shape" of requests/responses
+pydantic-settings==2.13.1 # Reads config from environment variables automatically
 
 # --- Database ---
-sqlalchemy==2.0.35        # ORM — lets you write Python instead of raw SQL
-alembic==1.13.3           # Database migrations — like git for your DB schema
-asyncpg==0.29.0           # Async PostgreSQL driver (faster than sync)
+sqlalchemy==2.0.49        # ORM — lets you write Python instead of raw SQL
+alembic==1.18.4           # Database migrations — like git for your DB schema
+asyncpg==0.31.0           # Async PostgreSQL driver (faster than sync)
 
 # --- Auth / Keycloak ---
-python-jose[cryptography]==3.3.0  # JWT token parsing and validation
-httpx==0.27.2                     # HTTP client — for calling Keycloak's API
+python-jose[cryptography]==3.5.0  # JWT token parsing and validation
+httpx==0.28.1                     # HTTP client — for calling Keycloak's API
 
 # --- AI / LangChain ---
-langchain==0.3.7
-langchain-community==0.3.7
-langchain-ollama==0.2.0     # LangChain adapter for Ollama
-langgraph==0.2.39           # For building stateful AI agents (more on this later)
+langchain==1.2.15
+langchain-community==0.4.1
+langchain-ollama==1.1.0     # LangChain adapter for Ollama
+langgraph==1.1.6            # For building stateful AI agents (more on this later)
 
 # --- Vector DB ---
-pymilvus==2.4.6             # Python client for Milvus
+pymilvus==2.6.12            # Python client for Milvus
 
 # --- Object Storage ---
-minio==7.2.9                # Python client for MinIO (S3-compatible)
+minio==7.2.20               # Python client for MinIO (S3-compatible)
 
 # --- Observability (Prometheus metrics) ---
-prometheus-fastapi-instrumentator==7.0.0  # Auto-generates /metrics endpoint
+prometheus-fastapi-instrumentator==7.1.0  # Auto-generates /metrics endpoint
 
 # --- Utilities ---
-python-multipart==0.0.12    # For file uploads
-tenacity==9.0.0             # Retry logic (e.g. retry DB connection on startup)
-structlog==24.4.0           # Structured JSON logging (better than print())
+beautifulsoup4==4.14.3      # HTML parsing for document chunker
+python-multipart==0.0.26    # For file uploads
+tenacity==9.1.4             # Retry logic (e.g. retry DB connection on startup)
+structlog==25.5.0           # Structured JSON logging (better than print())

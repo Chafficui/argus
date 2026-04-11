@@ -31,7 +31,7 @@
 #   With overlap, both chunks contain the bridging context.
 # =============================================================================
 
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 from bs4 import BeautifulSoup
 import re
 import structlog
@@ -119,12 +119,18 @@ class DocumentChunker:
         if main_content is None:
             return "", metadata
 
-        # get_text() extracts all text, separator="\n" preserves paragraph structure
-        text = main_content.get_text(separator="\n", strip=True)
-
-        # Clean up excessive whitespace
+        # Extract text block-by-block to preserve paragraph structure
+        # while collapsing whitespace within each block element.
+        block_tags = {"p", "div", "h1", "h2", "h3", "h4", "h5", "h6",
+                      "li", "blockquote", "pre", "section", "article"}
+        blocks = []
+        for element in main_content.find_all(block_tags):
+            block_text = element.get_text(separator=" ", strip=True)
+            block_text = re.sub(r"\s+", " ", block_text).strip()
+            if block_text:
+                blocks.append(block_text)
+        text = "\n".join(blocks)
         text = re.sub(r"\n{3,}", "\n\n", text)   # Max 2 consecutive newlines
-        text = re.sub(r" {2,}", " ", text)         # Max 1 consecutive space
 
         log.debug("Extracted text from HTML", chars=len(text), title=metadata.get("title"))
         return text, metadata

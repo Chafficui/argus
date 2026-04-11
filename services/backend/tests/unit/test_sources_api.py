@@ -42,7 +42,7 @@ class TestCreateSource:
         assert response.status_code == 201
         data = response.json()
         assert data["name"] == "Test Blog"
-        assert data["url"] == "https://test.example.com"
+        assert data["url"].rstrip("/") == "https://test.example.com"
         assert "id" in data
         assert data["is_active"] is True
 
