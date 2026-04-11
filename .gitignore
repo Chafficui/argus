@@ -1,0 +1,54 @@
+# =============================================================================
+# .gitignore
+# =============================================================================
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+.env               # LOCAL secrets — NEVER commit this
+.env.local
+*.egg-info/
+dist/
+build/
+.pip-cache/
+
+# --- Test / Coverage ---
+.pytest_cache/
+coverage-report/
+coverage.xml
+.coverage
+junit.xml
+
+# --- Node / Frontend ---
+node_modules/
+dist/
+.vite/
+
+# --- Docker ---
+*.tar
+
+# --- Kubernetes / Helm ---
+charts/argus/charts/    # Downloaded dependency charts (helm dependency update)
+*.lock                  # Helm lock files are auto-generated
+
+# --- Secrets / Config (NEVER commit these) ---
+values-prod.yaml        # Production values with real passwords
+values-secrets.yaml
+kubeconfig
+*.pem
+*.key
+*.crt
+
+# --- IDE ---
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# --- Logs ---
+*.log
+logs/
