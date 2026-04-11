@@ -1,0 +1,35 @@
+[tool.pytest.ini_options]
+# Where to find tests
+testpaths = ["tests"]
+
+# Async mode: "auto" means pytest-asyncio handles all async test functions automatically
+asyncio_mode = "auto"
+
+# Markers let us run only specific test categories:
+#   pytest -m unit          → only unit tests (fast, no Docker)
+#   pytest -m integration   → only integration tests (needs Docker)
+#   pytest -m e2e           → only E2E tests (needs full stack)
+markers = [
+    "unit: fast, isolated tests with no external dependencies",
+    "integration: tests that require real services (Postgres, Milvus) via Docker",
+    "e2e: full end-to-end tests against a running stack",
+]
+
+# Show extra info on failures
+addopts = """
+    -v
+    --tb=short
+    --strict-markers
+    --cov=app
+    --cov-report=term-missing
+    --cov-report=html:coverage-report
+    --cov-fail-under=70
+"""
+# --cov-fail-under=70 means the CI pipeline FAILS if coverage drops below 70%
+# This enforces that new code must be tested
+
+[tool.coverage.run]
+omit = [
+    "tests/*",
+    "app/models/*",   # DB models are mostly declarations, not logic
+]
