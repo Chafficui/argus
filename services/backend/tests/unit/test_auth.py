@@ -171,6 +171,31 @@ class TestVerifyToken:
         assert result.roles == []
 
 
+class TestGetJwks:
+    """Tests for the JWKS fetching function."""
+
+    @pytest.mark.unit
+    def test_fetches_jwks_from_keycloak(self, mocker):
+        from app.core.auth import get_jwks
+
+        # Clear lru_cache from prior tests
+        get_jwks.cache_clear()
+
+        mock_response = MagicMock()
+        mock_response.json.return_value = {"keys": [{"kty": "RSA", "kid": "test"}]}
+        mock_response.raise_for_status = MagicMock()
+
+        mocker.patch("app.core.auth.httpx.get", return_value=mock_response)
+
+        result = get_jwks()
+
+        assert result == {"keys": [{"kty": "RSA", "kid": "test"}]}
+        mock_response.raise_for_status.assert_called_once()
+
+        # Clean up lru_cache so other tests aren't affected
+        get_jwks.cache_clear()
+
+
 class TestRequireRole:
     """Tests for the require_role dependency factory."""
 

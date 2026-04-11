@@ -29,6 +29,7 @@ addopts = """
 # This enforces that new code must be tested
 
 [tool.coverage.run]
+concurrency = ["greenlet", "thread"]
 omit = [
     "tests/*",
     "app/models/*",   # DB models are mostly declarations, not logic

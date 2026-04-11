@@ -151,7 +151,7 @@ async def create_source(
     # Validate: SERP sources need a search_query
     if body.source_type == SourceType.SERP and not body.search_query:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="search_query is required for SERP sources",
         )
 
