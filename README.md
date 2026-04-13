@@ -85,9 +85,3 @@ argus/
 │   └── frontend/          # React app
 └── docs/
 ```
-
-## Week-by-Week Progress
-
-- [x] **Week 1** — Infra: K8s/Helm structure, Keycloak, Milvus, PostgreSQL, MinIO
-- [ ] **Week 2** — AI: RAG pipeline, LangGraph agent, Crawler
-- [ ] **Week 3** — Observability, Frontend, CI/CD
