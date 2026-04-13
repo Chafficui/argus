@@ -55,7 +55,9 @@ class LLMService:
             title = chunk.get("title", "Untitled")
             url = chunk.get("url", "")
             text = chunk.get("text", "")
-            source_label = f"[Source {i}: {title}]({url})" if url else f"[Source {i}: {title}]"
+            source_label = (
+                f"[Source {i}: {title}]({url})" if url else f"[Source {i}: {title}]"
+            )
             context_parts.append(f"{source_label}\n{text}")
 
         context_block = "\n\n---\n\n".join(context_parts)
@@ -64,7 +66,9 @@ class LLMService:
 
         messages = [
             SystemMessage(content=prompt),
-            HumanMessage(content=f"Context:\n\n{context_block}\n\nQuestion: {question}"),
+            HumanMessage(
+                content=f"Context:\n\n{context_block}\n\nQuestion: {question}"
+            ),
         ]
 
         log.info(

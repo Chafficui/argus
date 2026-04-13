@@ -13,7 +13,7 @@
 #   4. (optional) LLM synthesizes an answer from the top chunks
 # =============================================================================
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from pydantic import BaseModel, Field
@@ -21,7 +21,7 @@ import structlog
 
 from app.core.auth import verify_token, TokenData
 from app.db.database import get_db
-from app.models.models import Document, Source
+from app.models.models import Source
 from app.services.vector_store import vector_store
 from app.services.llm import llm_service
 
@@ -33,6 +33,7 @@ router = APIRouter(tags=["search"])
 # =============================================================================
 # SCHEMAS
 # =============================================================================
+
 
 class SearchRequest(BaseModel):
     query: str = Field(..., min_length=1)
@@ -73,6 +74,7 @@ class AskResponse(BaseModel):
 # HELPERS
 # =============================================================================
 
+
 async def enrich_results(
     results: list[dict],
     db: AsyncSession,
@@ -105,6 +107,7 @@ async def enrich_results(
 # =============================================================================
 # ENDPOINTS
 # =============================================================================
+
 
 @router.post("/", response_model=SearchResponse)
 async def search(

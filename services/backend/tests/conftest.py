@@ -30,7 +30,7 @@ from app.main import app
 from app.db.database import get_db
 from app.core.auth import verify_token
 from app.core.config import get_settings
-from app.models.models import Base, User
+from app.models.models import Base
 
 fake = Faker("en_US")  # English locale for realistic test data
 
@@ -179,6 +179,7 @@ def mock_vector_store(mocker):
 
     mocker.patch("app.services.processor.vector_store", mock)
     mocker.patch("app.api.routes.search.vector_store", mock)
+    mocker.patch("app.api.routes.sources.vector_store", mock)
     return mock
 
 

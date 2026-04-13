@@ -56,7 +56,8 @@ class TokenData(BaseModel):
     The data we extract from a valid JWT token.
     This gets passed to every route handler that requires auth.
     """
-    user_id: str           # Keycloak user UUID (the "sub" claim)
+
+    user_id: str  # Keycloak user UUID (the "sub" claim)
     email: str
     username: str
     roles: list[str] = []  # Roles from Keycloak realm_access
@@ -82,7 +83,9 @@ def get_jwks() -> dict:
     return response.json()
 
 
-def verify_token(credentials: HTTPAuthorizationCredentials | None = Depends(security)) -> TokenData:
+def verify_token(
+    credentials: HTTPAuthorizationCredentials | None = Depends(security),
+) -> TokenData:
     """
     FastAPI dependency — validates the JWT token on every protected route.
 
@@ -120,9 +123,9 @@ def verify_token(credentials: HTTPAuthorizationCredentials | None = Depends(secu
             algorithms=["RS256"],  # Keycloak uses RSA-256 by default
             audience=settings.keycloak_audience,
             options={
-                "verify_exp": True,   # Always verify expiry
-                "verify_aud": True,   # Always verify audience
-            }
+                "verify_exp": True,  # Always verify expiry
+                "verify_aud": True,  # Always verify audience
+            },
         )
 
         # Extract roles from Keycloak's realm_access claim
@@ -164,6 +167,7 @@ def require_role(role: str):
 
     This means only users with the "admin" role in Keycloak can call this endpoint.
     """
+
     def role_checker(user: TokenData = Depends(verify_token)) -> TokenData:
         if role not in user.roles:
             log.warning(

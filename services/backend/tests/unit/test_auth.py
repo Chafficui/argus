@@ -14,7 +14,7 @@
 
 import pytest
 import time
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock
 from jose import jwt
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa

@@ -28,6 +28,7 @@ from app.core.auth import verify_token, TokenData
 from app.db.database import get_db
 from app.models.models import Source, User, SourceType
 from app.core.config import get_settings
+from app.services.vector_store import vector_store
 
 log = structlog.get_logger()
 
@@ -43,22 +44,28 @@ router = APIRouter(tags=["sources"])
 # If a client sends wrong data → 422 Unprocessable Entity (automatic, no code needed)
 # =============================================================================
 
+
 class SourceCreate(BaseModel):
     """Schema for creating a new source — what the client sends."""
+
     name: str
-    url: HttpUrl              # Pydantic validates this is a valid URL
+    url: HttpUrl  # Pydantic validates this is a valid URL
     source_type: SourceType = SourceType.WEBSITE
     search_query: str | None = None
     crawl_interval_hours: int = 6
 
+
 class SourceUpdate(BaseModel):
     """Schema for updating — all fields optional (PATCH semantics)."""
+
     name: str | None = None
     is_active: bool | None = None
     crawl_interval_hours: int | None = None
 
+
 class SourceResponse(BaseModel):
     """Schema for responses — what we send back to the client."""
+
     id: str
     name: str
     url: str
@@ -77,15 +84,14 @@ class SourceResponse(BaseModel):
 # On first request, we sync the Keycloak user into our database.
 # =============================================================================
 
+
 async def get_or_create_user(token: TokenData, db: AsyncSession) -> User:
     """
     Looks up the user by their Keycloak ID.
     If they don't exist in our DB yet (first login), creates them.
     This pattern is called "upsert on first login".
     """
-    result = await db.execute(
-        select(User).where(User.keycloak_id == token.user_id)
-    )
+    result = await db.execute(select(User).where(User.keycloak_id == token.user_id))
     user = result.scalar_one_or_none()
 
     if user is None:
@@ -104,6 +110,7 @@ async def get_or_create_user(token: TokenData, db: AsyncSession) -> User:
 # =============================================================================
 # ENDPOINTS
 # =============================================================================
+
 
 @router.get("/", response_model=list[SourceResponse])
 async def list_sources(
@@ -137,7 +144,7 @@ async def create_source(
     # Check user hasn't exceeded their source limit
     result = await db.execute(
         select(Source).where(
-            and_(Source.user_id == user.id, Source.is_active == True)
+            and_(Source.user_id == user.id, Source.is_active.is_(True))
         )
     )
     existing = result.scalars().all()
@@ -180,9 +187,7 @@ async def get_source(
     user = await get_or_create_user(token, db)
 
     result = await db.execute(
-        select(Source).where(
-            and_(Source.id == source_id, Source.user_id == user.id)
-        )
+        select(Source).where(and_(Source.id == source_id, Source.user_id == user.id))
     )
     source = result.scalar_one_or_none()
 
@@ -203,9 +208,7 @@ async def update_source(
     user = await get_or_create_user(token, db)
 
     result = await db.execute(
-        select(Source).where(
-            and_(Source.id == source_id, Source.user_id == user.id)
-        )
+        select(Source).where(and_(Source.id == source_id, Source.user_id == user.id))
     )
     source = result.scalar_one_or_none()
 
@@ -217,7 +220,11 @@ async def update_source(
     for field, value in body.model_dump(exclude_unset=True).items():
         setattr(source, field, value)
 
-    log.info("Updated source", source_id=source_id, changes=body.model_dump(exclude_unset=True))
+    log.info(
+        "Updated source",
+        source_id=source_id,
+        changes=body.model_dump(exclude_unset=True),
+    )
     return source
 
 
@@ -231,14 +238,17 @@ async def delete_source(
     user = await get_or_create_user(token, db)
 
     result = await db.execute(
-        select(Source).where(
-            and_(Source.id == source_id, Source.user_id == user.id)
-        )
+        select(Source).where(and_(Source.id == source_id, Source.user_id == user.id))
     )
     source = result.scalar_one_or_none()
 
     if source is None:
         raise HTTPException(status_code=404, detail="Source not found")
 
-    await db.delete(source)  # cascade="all, delete-orphan" in the model handles related records
+    # Remove vectors from Milvus before deleting DB records
+    vector_store.delete_by_source(source_id)
+
+    await db.delete(
+        source
+    )  # cascade="all, delete-orphan" in the model handles related records
     log.info("Deleted source", source_id=source_id, user_id=user.id)

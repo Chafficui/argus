@@ -28,6 +28,7 @@ class TestDocumentProcessingPipeline:
     async def test_create_source_to_search_result(
         self,
         client,
+        in_memory_db,
         make_source,
         mock_vector_store,
         mock_storage,
@@ -55,24 +56,21 @@ class TestDocumentProcessingPipeline:
         from app.models.models import Document, DocumentStatus
 
         # Create a document record (normally done by the crawler)
-        async with client.app.dependency_overrides[
-            __import__('app.db.database', fromlist=['get_db']).get_db
-        ]() as db:
-            doc = Document(
-                source_id=source_id,
-                url="https://eu-ai-news.example.com/eu-ai-act",
-                status=DocumentStatus.RAW,
-            )
-            db.add(doc)
-            await db.flush()
+        doc = Document(
+            source_id=source_id,
+            url="https://eu-ai-news.example.com/eu-ai-act",
+            status=DocumentStatus.RAW,
+        )
+        in_memory_db.add(doc)
+        await in_memory_db.flush()
 
-            # Process it
-            success = await processor.process_document(
-                db=db,
-                document=doc,
-                html_content=sample_html,
-                user_id="test-keycloak-id-123",
-            )
+        # Process it
+        success = await processor.process_document(
+            db=in_memory_db,
+            document=doc,
+            html_content=sample_html,
+            user_id="test-keycloak-id-123",
+        )
 
         assert success is True
         # Verify vector store was called with chunks
@@ -128,12 +126,9 @@ class TestDocumentProcessingPipeline:
         If a page hasn't changed (same content hash), skip re-embedding.
         This prevents wasting compute on unchanged content.
         """
-        from app.services.processor import processor
-        from app.models.models import Document, DocumentStatus
 
         # First processing
-        source_resp = await client.post("/api/sources/", json=make_source())
-        source_id = source_resp.json()["id"]
+        await client.post("/api/sources/", json=make_source())
 
         # Simulate the document already being processed with the same hash
         mock_storage.store_raw_document.return_value = (
@@ -163,9 +158,23 @@ class TestHealthEndpoints:
 
     @pytest.mark.e2e
     async def test_readiness_probe(self, client):
-        response = await client.get("/health/ready")
-        assert response.status_code == 200
-        assert response.json()["status"] == "ready"
+        mock_session = AsyncMock()
+        mock_session_ctx = AsyncMock()
+        mock_session_ctx.__aenter__.return_value = mock_session
+        mock_session_ctx.__aexit__.return_value = False
+
+        mock_resp = MagicMock()
+        mock_resp.raise_for_status = MagicMock()
+
+        with patch("app.main.AsyncSessionLocal", return_value=mock_session_ctx), \
+             patch("app.main.vector_store") as mock_vs, \
+             patch("app.main.httpx.get", return_value=mock_resp):
+            mock_vs.collection = MagicMock()
+            mock_vs.collection.num_entities = 42
+
+            response = await client.get("/health/ready")
+            assert response.status_code == 200
+            assert response.json()["status"] == "ready"
 
     @pytest.mark.e2e
     async def test_metrics_endpoint_exists(self, client):

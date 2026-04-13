@@ -76,8 +76,13 @@ class DocumentProcessor:
 
             # Check if content has changed since last crawl
             # If hash is the same → skip re-processing (save compute)
-            if document.content_hash == content_hash and document.status == DocumentStatus.EMBEDDED:
-                log.info("Document unchanged, skipping re-processing", document_id=doc_id)
+            if (
+                document.content_hash == content_hash
+                and document.status == DocumentStatus.EMBEDDED
+            ):
+                log.info(
+                    "Document unchanged, skipping re-processing", document_id=doc_id
+                )
                 return True
 
             # Update document with storage info
@@ -148,7 +153,9 @@ class DocumentProcessor:
             await db.flush()
             return False
 
-    async def reprocess_document(self, db: AsyncSession, document_id: str, user_id: str) -> bool:
+    async def reprocess_document(
+        self, db: AsyncSession, document_id: str, user_id: str
+    ) -> bool:
         """
         Re-processes a document from its stored raw HTML.
         Useful if the embedding model changes or chunking strategy is updated.
@@ -158,7 +165,9 @@ class DocumentProcessor:
         document = result.scalar_one_or_none()
 
         if document is None or document.minio_path is None:
-            log.error("Document not found or has no stored content", document_id=document_id)
+            log.error(
+                "Document not found or has no stored content", document_id=document_id
+            )
             return False
 
         # Retrieve the raw HTML from MinIO

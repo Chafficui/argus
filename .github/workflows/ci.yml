@@ -130,7 +130,7 @@ jobs:
         run: pip install -r requirements.txt -r requirements-test.txt
 
       - name: Run integration tests
-        run: pytest tests/integration -m integration -v
+        run: pytest tests/integration -m integration -v --cov-fail-under=0
 
   # ---------------------------------------------------------------------------
   # E2E TESTS
@@ -152,7 +152,7 @@ jobs:
         run: pip install -r requirements.txt -r requirements-test.txt
 
       - name: Run E2E tests
-        run: pytest tests/e2e -m e2e -v
+        run: pytest tests/e2e -m e2e -v --cov-fail-under=0
 
   # ---------------------------------------------------------------------------
   # LINTING

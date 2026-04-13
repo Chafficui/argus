@@ -46,8 +46,8 @@ class DocumentChunker:
 
     def __init__(
         self,
-        chunk_size: int = 800,      # Target size in characters
-        chunk_overlap: int = 100,   # Overlap between consecutive chunks
+        chunk_size: int = 800,  # Target size in characters
+        chunk_overlap: int = 100,  # Overlap between consecutive chunks
     ):
         # RecursiveCharacterTextSplitter tries to split on these separators IN ORDER:
         # First tries to split on double newlines (paragraphs)
@@ -94,9 +94,17 @@ class DocumentChunker:
         # Remove noise elements — nav, footer, ads, scripts etc.
         # These add tokens without adding searchable content.
         noise_tags = [
-            "script", "style", "nav", "footer", "header",
-            "aside", "advertisement", "cookie-banner",
-            "noscript", "iframe", "form",
+            "script",
+            "style",
+            "nav",
+            "footer",
+            "header",
+            "aside",
+            "advertisement",
+            "cookie-banner",
+            "noscript",
+            "iframe",
+            "form",
         ]
         for tag in soup.find_all(noise_tags):
             tag.decompose()  # Remove from DOM
@@ -104,7 +112,16 @@ class DocumentChunker:
         # Also remove elements whose class list contains an exact noise class name.
         # We check each CSS class individually to avoid substring false positives
         # (e.g. "ad" matching "download" or "header" matching "in-header-enabled").
-        noise_classes = {"nav", "menu", "sidebar", "footer", "header", "ad", "banner", "cookie"}
+        noise_classes = {
+            "nav",
+            "menu",
+            "sidebar",
+            "footer",
+            "header",
+            "ad",
+            "banner",
+            "cookie",
+        }
         for tag in soup.find_all(class_=True):
             tag_classes = {c.lower() for c in tag.get("class", [])}
             if tag_classes & noise_classes:
@@ -112,11 +129,11 @@ class DocumentChunker:
 
         # Try to find the main content area first
         main_content = (
-            soup.find("main") or
-            soup.find("article") or
-            soup.find(id=re.compile(r"content|main|article", re.I)) or
-            soup.find(class_=re.compile(r"content|main|article|post", re.I)) or
-            soup.body
+            soup.find("main")
+            or soup.find("article")
+            or soup.find(id=re.compile(r"content|main|article", re.I))
+            or soup.find(class_=re.compile(r"content|main|article|post", re.I))
+            or soup.body
         )
 
         if main_content is None:
@@ -124,8 +141,21 @@ class DocumentChunker:
 
         # Extract text block-by-block to preserve paragraph structure
         # while collapsing whitespace within each block element.
-        block_tags = {"p", "div", "h1", "h2", "h3", "h4", "h5", "h6",
-                      "li", "blockquote", "pre", "section", "article"}
+        block_tags = {
+            "p",
+            "div",
+            "h1",
+            "h2",
+            "h3",
+            "h4",
+            "h5",
+            "h6",
+            "li",
+            "blockquote",
+            "pre",
+            "section",
+            "article",
+        }
         blocks = []
         for element in main_content.find_all(block_tags):
             block_text = element.get_text(separator=" ", strip=True)
@@ -133,9 +163,11 @@ class DocumentChunker:
             if block_text:
                 blocks.append(block_text)
         text = "\n".join(blocks)
-        text = re.sub(r"\n{3,}", "\n\n", text)   # Max 2 consecutive newlines
+        text = re.sub(r"\n{3,}", "\n\n", text)  # Max 2 consecutive newlines
 
-        log.debug("Extracted text from HTML", chars=len(text), title=metadata.get("title"))
+        log.debug(
+            "Extracted text from HTML", chars=len(text), title=metadata.get("title")
+        )
         return text, metadata
 
     def chunk_text(

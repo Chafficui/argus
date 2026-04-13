@@ -22,7 +22,7 @@ import pytest
 import pytest_asyncio
 from testcontainers.postgres import PostgresContainer
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
-from sqlalchemy import select, text
+from sqlalchemy import select
 
 from app.models.models import Base, Source, Document, CrawlJob, SourceType, DocumentStatus, CrawlStatus
 from app.db.database import get_db
@@ -48,7 +48,7 @@ def postgres_container():
         yield pg
 
 
-@pytest_asyncio.fixture(scope="session")
+@pytest_asyncio.fixture
 async def pg_engine(postgres_container):
     """Create async SQLAlchemy engine connected to the test Postgres container."""
     # testcontainers gives us the connection URL — we just replace the driver prefix
@@ -73,23 +73,15 @@ async def pg_engine(postgres_container):
 @pytest_asyncio.fixture
 async def pg_session(pg_engine):
     """
-    Provides a database session that rolls back after each test.
-    This keeps tests isolated — no data leaks between tests.
-
-    SAVEPOINT trick:
-    We wrap each test in a transaction and roll it back at the end.
-    This is much faster than dropping/recreating tables.
+    Provides a fresh database session for each test.
+    Tables are created/dropped per test via pg_engine (function-scoped),
+    so no savepoint trick is needed — each test starts with clean tables.
     """
-    async with pg_engine.begin() as conn:
-        # Create a savepoint — we'll roll back to here after the test
-        await conn.execute(text("SAVEPOINT test_savepoint"))
-        session_factory = async_sessionmaker(
-            bind=conn, class_=AsyncSession, expire_on_commit=False
-        )
-        async with session_factory() as session:
-            yield session
-        # Roll back to savepoint — test data is erased
-        await conn.execute(text("ROLLBACK TO SAVEPOINT test_savepoint"))
+    session_factory = async_sessionmaker(
+        bind=pg_engine, class_=AsyncSession, expire_on_commit=False
+    )
+    async with session_factory() as session:
+        yield session
 
 
 # =============================================================================

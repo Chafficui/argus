@@ -35,6 +35,7 @@ settings = get_settings()
 # This is where we initialize DB connections, download models, etc.
 # =============================================================================
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # --- STARTUP ---
@@ -86,13 +87,13 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:5173",    # Vite dev server
-        "http://localhost:3000",    # Alternative dev port
+        "http://localhost:5173",  # Vite dev server
+        "http://localhost:3000",  # Alternative dev port
         f"http://{settings.environment == 'production' and 'argus.local' or 'localhost'}",
     ],
-    allow_credentials=True,        # Allow cookies and Authorization headers
-    allow_methods=["*"],           # Allow GET, POST, PUT, DELETE, etc.
-    allow_headers=["*"],           # Allow Authorization header etc.
+    allow_credentials=True,  # Allow cookies and Authorization headers
+    allow_methods=["*"],  # Allow GET, POST, PUT, DELETE, etc.
+    allow_headers=["*"],  # Allow Authorization header etc.
 )
 
 
@@ -124,6 +125,7 @@ app.include_router(search.router, prefix="/api/search")
 #   /health       → livenessProbe  (is the app alive?)
 #   /health/ready → readinessProbe (is the app ready for traffic?)
 # =============================================================================
+
 
 @app.get("/health", tags=["health"])
 async def health():

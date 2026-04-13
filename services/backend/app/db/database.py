@@ -21,7 +21,6 @@
 # =============================================================================
 
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
-from sqlalchemy.pool import NullPool
 from app.core.config import get_settings
 from app.models.models import Base
 import structlog
@@ -35,10 +34,10 @@ def get_engine():
     return create_async_engine(
         settings.postgres_url,
         # Pool settings:
-        pool_size=10,          # Keep 10 connections open permanently
-        max_overflow=20,       # Allow up to 20 extra connections during spikes
-        pool_pre_ping=True,    # Check connection health before handing it to a request
-                               # (prevents "broken pipe" errors if Postgres restarted)
+        pool_size=10,  # Keep 10 connections open permanently
+        max_overflow=20,  # Allow up to 20 extra connections during spikes
+        pool_pre_ping=True,  # Check connection health before handing it to a request
+        # (prevents "broken pipe" errors if Postgres restarted)
         echo=settings.environment == "development",  # Log all SQL in dev mode
     )
 

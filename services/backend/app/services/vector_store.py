@@ -46,6 +46,7 @@ log = structlog.get_logger()
 # The schema defines what fields each record has.
 # =============================================================================
 
+
 def build_schema(embedding_dim: int) -> CollectionSchema:
     """
     Defines the structure of our Milvus collection.
@@ -62,8 +63,8 @@ def build_schema(embedding_dim: int) -> CollectionSchema:
             name="id",
             dtype=DataType.VARCHAR,
             max_length=64,
-            is_primary=True,    # Primary key — must be unique
-            auto_id=False,      # We generate IDs ourselves
+            is_primary=True,  # Primary key — must be unique
+            auto_id=False,  # We generate IDs ourselves
         ),
         FieldSchema(
             name="document_id",
@@ -83,7 +84,7 @@ def build_schema(embedding_dim: int) -> CollectionSchema:
         FieldSchema(
             name="text",
             dtype=DataType.VARCHAR,
-            max_length=4096,    # Max chunk size in characters
+            max_length=4096,  # Max chunk size in characters
         ),
         FieldSchema(
             name="title",
@@ -97,12 +98,12 @@ def build_schema(embedding_dim: int) -> CollectionSchema:
         ),
         FieldSchema(
             name="chunk_index",
-            dtype=DataType.INT32,   # Position of this chunk within the document
+            dtype=DataType.INT32,  # Position of this chunk within the document
         ),
         FieldSchema(
             name="embedding",
             dtype=DataType.FLOAT_VECTOR,
-            dim=embedding_dim,      # Must match the output dimension of the embedding model
+            dim=embedding_dim,  # Must match the output dimension of the embedding model
         ),
     ]
 
@@ -193,7 +194,7 @@ class VectorStoreService:
         self.collection.create_index(
             field_name="embedding",
             index_params={
-                "metric_type": "COSINE",    # Cosine similarity for text
+                "metric_type": "COSINE",  # Cosine similarity for text
                 "index_type": "HNSW",
                 "params": {
                     "M": 16,
@@ -306,13 +307,21 @@ class VectorStoreService:
         }
 
         results = self.collection.search(
-            data=[query_vector],       # Batch of query vectors (we send 1)
-            anns_field="embedding",    # Which field to search
+            data=[query_vector],  # Batch of query vectors (we send 1)
+            anns_field="embedding",  # Which field to search
             param=search_params,
             limit=top_k,
             expr=filter_expr,
             # Which fields to return alongside the vector match
-            output_fields=["id", "document_id", "source_id", "text", "title", "url", "chunk_index"],
+            output_fields=[
+                "id",
+                "document_id",
+                "source_id",
+                "text",
+                "title",
+                "url",
+                "chunk_index",
+            ],
         )
 
         # results[0] because we searched with one query vector
@@ -320,17 +329,19 @@ class VectorStoreService:
 
         formatted = []
         for hit in hits:
-            formatted.append({
-                "chunk_id": hit.id,
-                "document_id": hit.entity.get("document_id"),
-                "source_id": hit.entity.get("source_id"),
-                "text": hit.entity.get("text"),
-                "title": hit.entity.get("title"),
-                "url": hit.entity.get("url"),
-                "chunk_index": hit.entity.get("chunk_index"),
-                # Cosine similarity score: 1.0 = identical, 0.0 = unrelated
-                "score": float(hit.score),
-            })
+            formatted.append(
+                {
+                    "chunk_id": hit.id,
+                    "document_id": hit.entity.get("document_id"),
+                    "source_id": hit.entity.get("source_id"),
+                    "text": hit.entity.get("text"),
+                    "title": hit.entity.get("title"),
+                    "url": hit.entity.get("url"),
+                    "chunk_index": hit.entity.get("chunk_index"),
+                    # Cosine similarity score: 1.0 = identical, 0.0 = unrelated
+                    "score": float(hit.score),
+                }
+            )
 
         log.info(
             "Vector search completed",

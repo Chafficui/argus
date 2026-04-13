@@ -111,7 +111,9 @@ class StorageService:
             return minio_path, content_hash
 
         except S3Error as e:
-            log.error("Failed to store document in MinIO", error=str(e), path=minio_path)
+            log.error(
+                "Failed to store document in MinIO", error=str(e), path=minio_path
+            )
             raise
 
     def retrieve_raw_document(self, minio_path: str) -> bytes:
@@ -126,7 +128,9 @@ class StorageService:
             response.release_conn()
             return content
         except S3Error as e:
-            log.error("Failed to retrieve document from MinIO", error=str(e), path=minio_path)
+            log.error(
+                "Failed to retrieve document from MinIO", error=str(e), path=minio_path
+            )
             raise
 
     def store_chunks(self, document_id: str, chunks: list[dict]) -> str:

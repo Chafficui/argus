@@ -166,7 +166,7 @@ class TestUpdateSource:
 class TestDeleteSource:
 
     @pytest.mark.unit
-    async def test_delete_existing_source(self, client, make_source):
+    async def test_delete_existing_source(self, client, make_source, mock_vector_store):
         created = (await client.post("/api/sources/", json=make_source())).json()
         source_id = created["id"]
 

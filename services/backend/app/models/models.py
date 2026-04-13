@@ -19,8 +19,15 @@
 # =============================================================================
 
 from sqlalchemy import (
-    Column, String, Boolean, Integer, Float,
-    DateTime, Text, ForeignKey, Enum
+    Column,
+    String,
+    Boolean,
+    Integer,
+    Float,
+    DateTime,
+    Text,
+    ForeignKey,
+    Enum,
 )
 from sqlalchemy.orm import DeclarativeBase, relationship
 from sqlalchemy.sql import func
@@ -34,6 +41,7 @@ def generate_uuid() -> str:
 
 class Base(DeclarativeBase):
     """Base class for all models — gives us created_at/updated_at for free."""
+
     pass
 
 
@@ -43,10 +51,11 @@ class Base(DeclarativeBase):
 # PostgreSQL stores these efficiently and enforces the constraint at DB level.
 # =============================================================================
 
+
 class SourceType(str, enum.Enum):
-    RSS = "rss"           # RSS/Atom feed — structured, easy to parse
-    WEBSITE = "website"   # Regular webpage — crawled with Playwright
-    SERP = "serp"         # Search Engine Results Page — query + monitor results
+    RSS = "rss"  # RSS/Atom feed — structured, easy to parse
+    WEBSITE = "website"  # Regular webpage — crawled with Playwright
+    SERP = "serp"  # Search Engine Results Page — query + monitor results
 
 
 class CrawlStatus(str, enum.Enum):
@@ -57,9 +66,9 @@ class CrawlStatus(str, enum.Enum):
 
 
 class DocumentStatus(str, enum.Enum):
-    RAW = "raw"               # Just crawled, not yet processed
-    CHUNKED = "chunked"       # Split into chunks
-    EMBEDDED = "embedded"     # Vectors stored in Milvus — ready for search
+    RAW = "raw"  # Just crawled, not yet processed
+    CHUNKED = "chunked"  # Split into chunks
+    EMBEDDED = "embedded"  # Vectors stored in Milvus — ready for search
     FAILED = "failed"
 
 
@@ -67,12 +76,14 @@ class DocumentStatus(str, enum.Enum):
 # MODELS
 # =============================================================================
 
+
 class User(Base):
     """
     Mirrors Keycloak users in our database.
     We don't store passwords — Keycloak handles auth.
     We just store preferences and track activity.
     """
+
     __tablename__ = "users"
 
     id = Column(String, primary_key=True, default=generate_uuid)
@@ -86,7 +97,9 @@ class User(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     # Relationships — SQLAlchemy can automatically join related tables
-    sources = relationship("Source", back_populates="owner", cascade="all, delete-orphan")
+    sources = relationship(
+        "Source", back_populates="owner", cascade="all, delete-orphan"
+    )
 
 
 class Source(Base):
@@ -94,6 +107,7 @@ class Source(Base):
     A monitored source — a URL that Argus watches and crawls periodically.
     Could be an RSS feed, a website, or a search query.
     """
+
     __tablename__ = "sources"
 
     id = Column(String, primary_key=True, default=generate_uuid)
@@ -115,8 +129,12 @@ class Source(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     owner = relationship("User", back_populates="sources")
-    documents = relationship("Document", back_populates="source", cascade="all, delete-orphan")
-    crawl_jobs = relationship("CrawlJob", back_populates="source", cascade="all, delete-orphan")
+    documents = relationship(
+        "Document", back_populates="source", cascade="all, delete-orphan"
+    )
+    crawl_jobs = relationship(
+        "CrawlJob", back_populates="source", cascade="all, delete-orphan"
+    )
 
 
 class Document(Base):
@@ -130,6 +148,7 @@ class Document(Base):
     The vector embeddings are stored in Milvus (vector DB).
     Here we store the Milvus document ID so we can cross-reference.
     """
+
     __tablename__ = "documents"
 
     id = Column(String, primary_key=True, default=generate_uuid)
@@ -170,6 +189,7 @@ class CrawlJob(Base):
     This gives us an audit log and helps with debugging.
     Also provides data for the Grafana dashboard (crawl success rate, timing etc.)
     """
+
     __tablename__ = "crawl_jobs"
 
     id = Column(String, primary_key=True, default=generate_uuid)
