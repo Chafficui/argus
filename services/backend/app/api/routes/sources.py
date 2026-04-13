@@ -71,6 +71,7 @@ class SourceResponse(BaseModel):
     name: str
     url: str
     source_type: SourceType
+    search_query: str | None = None
     is_active: bool
     crawl_interval_hours: int
     last_crawled_at: datetime | None
