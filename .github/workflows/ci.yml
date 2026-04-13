@@ -42,6 +42,7 @@ defaults:
 env:
   REGISTRY: ghcr.io  # GitHub Container Registry
   IMAGE_NAME: ${{ github.repository }}  # e.g. "felixbe/argus"
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 # =============================================================================
 # JOBS
@@ -200,8 +201,8 @@ jobs:
 
     strategy:
       matrix:
-        # Build both services in parallel
-        service: [backend, frontend]
+        # Add services here as their Dockerfiles are created
+        service: [backend]
 
     steps:
       - uses: actions/checkout@v4
