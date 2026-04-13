@@ -84,7 +84,8 @@ async def ingest_document(
         status=DocumentStatus.RAW,
     )
     db.add(doc)
-    await db.flush()
+    # Commit now so the background task (which opens its own session) can see the document
+    await db.commit()
 
     doc_id = doc.id
 

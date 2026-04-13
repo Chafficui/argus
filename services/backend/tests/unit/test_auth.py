@@ -75,7 +75,18 @@ def sign_token(rsa_key_pair):
 
 
 @pytest.fixture
-def mock_jwks(rsa_key_pair, mocker):
+def no_bypass(mocker):
+    """Disable the dev auth bypass so JWT validation is actually exercised."""
+    mock_settings = mocker.patch("app.core.auth.get_settings")
+    mock_settings.return_value.dev_auth_bypass = False
+    mock_settings.return_value.environment = "test"
+    mock_settings.return_value.keycloak_jwks_url = "http://localhost:8080/realms/argus/protocol/openid-connect/certs"
+    mock_settings.return_value.keycloak_audience = "argus-backend"
+    return mock_settings
+
+
+@pytest.fixture
+def mock_jwks(rsa_key_pair, mocker, no_bypass):
     """
     Mocks the get_jwks() call so auth code uses our test public key
     instead of trying to fetch from Keycloak.
@@ -129,7 +140,7 @@ class TestVerifyToken:
         assert "expired" in exc_info.value.detail.lower()
 
     @pytest.mark.unit
-    def test_missing_token_raises_401(self):
+    def test_missing_token_raises_401(self, no_bypass):
         """No Authorization header at all."""
         with pytest.raises(HTTPException) as exc_info:
             verify_token(None)
@@ -193,6 +204,39 @@ class TestGetJwks:
         mock_response.raise_for_status.assert_called_once()
 
         # Clean up lru_cache so other tests aren't affected
+        get_jwks.cache_clear()
+
+    @pytest.mark.unit
+    def test_returns_503_when_keycloak_unreachable(self, mocker):
+        """When Keycloak is down, verify_token should return 503, not 500."""
+        import httpx as httpx_lib
+        from app.core.auth import get_jwks
+
+        get_jwks.cache_clear()
+
+        # Simulate Keycloak being unreachable
+        mocker.patch(
+            "app.core.auth.httpx.get",
+            side_effect=httpx_lib.ConnectError("Connection refused"),
+        )
+
+        # Bypass must be off for this test
+        mock_settings = mocker.patch("app.core.auth.get_settings")
+        mock_settings.return_value.dev_auth_bypass = False
+        mock_settings.return_value.environment = "production"
+        mock_settings.return_value.keycloak_jwks_url = "http://localhost:8080/realms/argus/protocol/openid-connect/certs"
+        mock_settings.return_value.keycloak_audience = "argus-backend"
+
+        credentials = HTTPAuthorizationCredentials(
+            scheme="Bearer", credentials="some-token"
+        )
+
+        with pytest.raises(HTTPException) as exc_info:
+            verify_token(credentials)
+
+        assert exc_info.value.status_code == 503
+        assert "unavailable" in exc_info.value.detail.lower()
+
         get_jwks.cache_clear()
 
 

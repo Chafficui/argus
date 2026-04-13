@@ -120,6 +120,15 @@ def verify_token(
     token = credentials.credentials
 
     try:
+        jwks = get_jwks()
+    except Exception as e:
+        log.error("Failed to fetch JWKS from Keycloak", error=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Authentication service unavailable",
+        )
+
+    try:
         # jose.jwt.decode() does everything:
         # 1. Fetches the right public key from JWKS (by key ID in token header)
         # 2. Verifies the signature
@@ -128,7 +137,7 @@ def verify_token(
         # 5. Returns the payload as a dict
         payload = jwt.decode(
             token,
-            get_jwks(),
+            jwks,
             algorithms=["RS256"],  # Keycloak uses RSA-256 by default
             audience=settings.keycloak_audience,
             options={

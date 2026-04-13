@@ -14,8 +14,13 @@
 # We keep them focused on the "happy path" and critical failure modes.
 # =============================================================================
 
+import base64
+
 import pytest
 from unittest.mock import patch, MagicMock, AsyncMock
+from sqlalchemy import select
+
+from app.models.models import Document, DocumentStatus
 
 
 class TestDocumentProcessingPipeline:
@@ -89,6 +94,47 @@ class TestDocumentProcessingPipeline:
         assert len(results) > 0
         assert results[0]["score"] > 0.8  # High relevance score
         assert "EU AI Act" in results[0]["text"]
+
+    @pytest.mark.e2e
+    async def test_ingest_commits_before_background_task(
+        self,
+        client,
+        in_memory_db,
+        make_source,
+        mock_vector_store,
+        mock_storage,
+        mocker,
+    ):
+        """
+        POST /api/ingest/ must commit() the document, not just flush().
+
+        Regression test: previously the endpoint only flushed, so the background
+        task (which opens its own DB session) couldn't see the document.
+        The test DB override doesn't call commit() in cleanup, so only an
+        explicit commit() in the endpoint will trigger the spy.
+        """
+        source = (await client.post("/api/sources/", json=make_source())).json()
+
+        payload = {
+            "source_id": source["id"],
+            "url": "https://example.com/test-article",
+            "html_content": base64.b64encode(b"<html><body>Test</body></html>").decode(),
+        }
+
+        # Spy on commit — set up AFTER source creation so we only track the ingest call
+        commit_spy = mocker.patch.object(
+            in_memory_db, "commit", wraps=in_memory_db.commit
+        )
+
+        # Mock background task to prevent it from hitting real Postgres
+        with patch("app.api.routes.ingest._process_in_background"):
+            response = await client.post("/api/ingest/", json=payload)
+
+        assert response.status_code == 202
+
+        # The endpoint must explicitly commit so background tasks (new sessions) see the data.
+        # flush() alone would NOT trigger this spy — only commit() does.
+        commit_spy.assert_called()
 
     @pytest.mark.e2e
     async def test_source_deletion_cleans_up_vectors(
