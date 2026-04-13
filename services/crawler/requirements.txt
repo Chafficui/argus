@@ -1,0 +1,31 @@
+# =============================================================================
+# services/crawler/requirements.txt
+# =============================================================================
+# Core dependencies for the Argus crawler service.
+#
+# Install:
+#   pip install -r requirements.txt
+#   playwright install chromium
+# =============================================================================
+
+# Browser automation — renders JavaScript-heavy pages like a real browser
+playwright==1.52.0
+
+# Async HTTP client — for lightweight fetches (RSS feeds, static pages)
+httpx==0.28.1
+
+# RSS/Atom feed parser — extracts articles from feed XML
+feedparser==6.0.11
+
+# Retry logic — exponential backoff for flaky network requests
+tenacity==9.1.4
+
+# Structured logging — same format as the backend for unified log aggregation
+structlog==25.5.0
+
+# Cron-style task scheduling — triggers crawl jobs on interval
+schedule==1.2.2
+
+# Settings management — reads env vars and .env files
+pydantic-settings==2.13.1
+pydantic==2.12.5
