@@ -94,7 +94,7 @@ def mock_user():
     from app.core.auth import TokenData
     return TokenData(
         user_id="test-keycloak-id-123",
-        email="felix@codai.dev",
+        email="felix@codai.app",
         username="felix",
         roles=["user"],
     )
@@ -105,7 +105,7 @@ def mock_admin_user():
     from app.core.auth import TokenData
     return TokenData(
         user_id="admin-keycloak-id-456",
-        email="admin@codai.dev",
+        email="admin@codai.app",
         username="admin",
         roles=["user", "admin"],
     )

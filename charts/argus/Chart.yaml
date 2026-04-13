@@ -16,7 +16,7 @@ keywords:
 
 maintainers:
   - name: Felix
-    email: felix@codai.dev
+    email: felix@codai.app
 
 # Dependencies: external Helm charts we reuse instead of writing ourselves.
 # Think of these like npm packages — we declare them here, Helm downloads them.

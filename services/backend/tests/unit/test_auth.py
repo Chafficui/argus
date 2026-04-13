@@ -112,7 +112,7 @@ class TestVerifyToken:
     def test_valid_token_returns_token_data(self, sign_token, mock_jwks):
         token = sign_token({
             "sub": "user-123",
-            "email": "felix@codai.dev",
+            "email": "felix@codai.app",
             "preferred_username": "felix",
             "realm_access": {"roles": ["user", "admin"]},
         })
@@ -122,7 +122,7 @@ class TestVerifyToken:
 
         assert isinstance(result, TokenData)
         assert result.user_id == "user-123"
-        assert result.email == "felix@codai.dev"
+        assert result.email == "felix@codai.app"
         assert result.username == "felix"
         assert "admin" in result.roles
 

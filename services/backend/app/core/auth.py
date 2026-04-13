@@ -24,7 +24,7 @@
 # The payload contains claims like:
 #   {
 #     "sub": "user-123",          ← user ID
-#     "email": "felix@codai.dev", ← email
+#     "email": "felix@codai.app", ← email
 #     "realm_access": {
 #       "roles": ["admin", "user"] ← roles assigned in Keycloak
 #     },
