@@ -1,0 +1,13 @@
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+
+markers = [
+    "unit: fast, isolated tests with no external dependencies",
+]
+
+addopts = """
+    -v
+    --tb=short
+    --strict-markers
+"""
