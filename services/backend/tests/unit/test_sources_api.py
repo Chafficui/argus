@@ -181,3 +181,43 @@ class TestDeleteSource:
     async def test_delete_nonexistent_source_returns_404(self, client):
         response = await client.delete("/api/sources/ghost-source")
         assert response.status_code == 404
+
+
+class TestGetCrawlJobs:
+
+    @pytest.mark.unit
+    async def test_returns_crawl_jobs_for_source(self, client, make_source, mock_vector_store, mock_storage):
+        source = (await client.post("/api/sources/", json=make_source())).json()
+
+        # Create a crawl job via the ingest endpoint
+        await client.post("/api/ingest/crawl-job", json={
+            "source_id": source["id"],
+            "status": "success",
+            "documents_found": 3,
+            "documents_indexed": 2,
+            "duration_seconds": 5.0,
+        })
+
+        response = await client.get(f"/api/sources/{source['id']}/crawl-jobs")
+        assert response.status_code == 200
+
+        jobs = response.json()
+        assert len(jobs) == 1
+        assert jobs[0]["source_id"] == source["id"]
+        assert jobs[0]["status"] == "success"
+        assert jobs[0]["documents_found"] == 3
+        assert jobs[0]["documents_indexed"] == 2
+        assert jobs[0]["duration_seconds"] == 5.0
+
+    @pytest.mark.unit
+    async def test_returns_empty_for_no_jobs(self, client, make_source, mock_vector_store):
+        source = (await client.post("/api/sources/", json=make_source())).json()
+
+        response = await client.get(f"/api/sources/{source['id']}/crawl-jobs")
+        assert response.status_code == 200
+        assert response.json() == []
+
+    @pytest.mark.unit
+    async def test_nonexistent_source_returns_404(self, client, mock_vector_store):
+        response = await client.get("/api/sources/nonexistent/crawl-jobs")
+        assert response.status_code == 404

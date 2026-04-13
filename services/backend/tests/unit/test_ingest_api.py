@@ -59,6 +59,53 @@ class TestIngestEndpoint:
         assert response.status_code == 202
 
 
+class TestCrawlJobReport:
+
+    @pytest.mark.unit
+    async def test_report_creates_crawl_job(self, client, make_source, mock_vector_store, mock_storage):
+        source = (await client.post("/api/sources/", json=make_source())).json()
+
+        payload = {
+            "source_id": source["id"],
+            "status": "success",
+            "documents_found": 5,
+            "documents_indexed": 4,
+            "duration_seconds": 12.5,
+        }
+        response = await client.post("/api/ingest/crawl-job", json=payload)
+        assert response.status_code == 201
+
+        data = response.json()
+        assert "crawl_job_id" in data
+
+    @pytest.mark.unit
+    async def test_report_failed_crawl_job(self, client, make_source, mock_vector_store, mock_storage):
+        source = (await client.post("/api/sources/", json=make_source())).json()
+
+        payload = {
+            "source_id": source["id"],
+            "status": "failed",
+            "documents_found": 0,
+            "documents_indexed": 0,
+            "duration_seconds": 1.2,
+            "error_message": "Connection refused",
+        }
+        response = await client.post("/api/ingest/crawl-job", json=payload)
+        assert response.status_code == 201
+
+    @pytest.mark.unit
+    async def test_report_nonexistent_source_returns_404(self, client, mock_vector_store, mock_storage):
+        payload = {
+            "source_id": "nonexistent-id",
+            "status": "success",
+            "documents_found": 0,
+            "documents_indexed": 0,
+            "duration_seconds": 0.5,
+        }
+        response = await client.post("/api/ingest/crawl-job", json=payload)
+        assert response.status_code == 404
+
+
 class TestUpdateLastCrawled:
 
     @pytest.mark.unit

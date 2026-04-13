@@ -19,7 +19,7 @@
 
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_
 from pydantic import BaseModel, HttpUrl
@@ -27,7 +27,7 @@ import structlog
 
 from app.core.auth import verify_token, TokenData
 from app.db.database import get_db
-from app.models.models import Source, User, SourceType
+from app.models.models import Source, User, SourceType, CrawlJob, CrawlStatus
 from app.core.config import get_settings
 from app.services.vector_store import vector_store
 
@@ -275,3 +275,54 @@ async def update_last_crawled(
     source.last_crawled_at = datetime.now(timezone.utc)
     log.info("Updated last_crawled_at", source_id=source_id)
     return source
+
+
+# =============================================================================
+# CRAWL HISTORY
+# =============================================================================
+
+
+class CrawlJobResponse(BaseModel):
+    id: str
+    source_id: str
+    status: CrawlStatus
+    started_at: datetime | None
+    finished_at: datetime | None
+    documents_found: int
+    documents_indexed: int
+    duration_seconds: float | None
+    error_message: str | None
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+@router.get("/{source_id}/crawl-jobs", response_model=list[CrawlJobResponse])
+async def get_crawl_jobs(
+    source_id: str,
+    limit: int = Query(default=20, ge=1, le=100),
+    db: AsyncSession = Depends(get_db),
+    token: TokenData = Depends(verify_token),
+):
+    """Return the most recent crawl jobs for a source."""
+    user = await get_or_create_user(token, db)
+
+    # Verify source belongs to user
+    result = await db.execute(
+        select(Source).where(and_(Source.id == source_id, Source.user_id == user.id))
+    )
+    source = result.scalar_one_or_none()
+
+    if source is None:
+        raise HTTPException(status_code=404, detail="Source not found")
+
+    result = await db.execute(
+        select(CrawlJob)
+        .where(CrawlJob.source_id == source_id)
+        .order_by(CrawlJob.created_at.desc())
+        .limit(limit)
+    )
+    jobs = result.scalars().all()
+
+    log.info("Listed crawl jobs", source_id=source_id, count=len(jobs))
+    return jobs
