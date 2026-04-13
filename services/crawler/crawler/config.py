@@ -35,6 +35,9 @@ class CrawlerSettings(BaseSettings):
     # How often to poll for sources that need crawling (seconds)
     poll_interval_seconds: int = 60
 
+    # SearXNG URL for SERP source type
+    searxng_url: str = "http://localhost:8080"
+
     # Logging
     log_level: str = "info"
 
