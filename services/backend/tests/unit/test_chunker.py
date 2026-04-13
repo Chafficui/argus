@@ -67,6 +67,55 @@ class TestExtractTextFromHtml:
         assert "Unclosed paragraph" in text
 
 
+    @pytest.mark.unit
+    def test_noise_class_exact_match_does_not_destroy_content(self, chunker):
+        """Regression: noise class 'ad' must not match 'download', 'heading', etc."""
+        html = b"""
+        <html>
+        <body>
+            <main>
+                <div class="download-section">
+                    <p>Download the full report on AI regulation here.</p>
+                </div>
+                <div class="breadcrumb-nav">
+                    <p>Home > Articles > AI Regulation</p>
+                </div>
+                <div class="heading-large">
+                    <p>This heading contains important content about machine learning.</p>
+                </div>
+                <div class="metadata-info">
+                    <p>Published on 2026-01-15 by the research team.</p>
+                </div>
+            </main>
+        </body>
+        </html>
+        """
+        text, _ = chunker.extract_text_from_html(html)
+        assert "Download the full report" in text
+        assert "breadcrumb" not in text.lower() or "Home > Articles" in text
+        assert "important content about machine learning" in text
+        assert "Published on 2026-01-15" in text
+
+    @pytest.mark.unit
+    def test_noise_class_exact_match_removes_real_noise(self, chunker):
+        """Elements with exactly 'ad', 'nav', 'sidebar' as a class should be removed."""
+        html = b"""
+        <html>
+        <body>
+            <main>
+                <div class="ad">Buy our product now!</div>
+                <div class="sidebar">Related links</div>
+                <p>This is the actual article content that should remain.</p>
+            </main>
+        </body>
+        </html>
+        """
+        text, _ = chunker.extract_text_from_html(html)
+        assert "Buy our product" not in text
+        assert "Related links" not in text
+        assert "actual article content" in text
+
+
 class TestChunkText:
     """Tests for text → chunks splitting."""
 

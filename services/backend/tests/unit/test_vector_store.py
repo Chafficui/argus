@@ -153,6 +153,33 @@ class TestVectorStoreService:
         mock_deps["collection"].flush.assert_called_once()
 
     @pytest.mark.unit
+    def test_insert_chunks_sends_list_of_lists(self, vector_store, mock_deps):
+        """Regression: pymilvus 2.6 expects list-of-lists, not dict-of-lists."""
+        vector_store.collection = mock_deps["collection"]
+        mock_deps["embeddings"].embed_documents.return_value = [[0.1] * 768, [0.2] * 768]
+
+        chunks = [
+            {
+                "document_id": "doc-1", "source_id": "src-1", "user_id": "user-1",
+                "text": "First chunk", "title": "T", "url": "https://example.com", "chunk_index": 0,
+            },
+            {
+                "document_id": "doc-1", "source_id": "src-1", "user_id": "user-1",
+                "text": "Second chunk", "title": "T", "url": "https://example.com", "chunk_index": 1,
+            },
+        ]
+
+        vector_store.insert_chunks(chunks)
+
+        data = mock_deps["collection"].insert.call_args[0][0]
+        assert isinstance(data, list), "insert() must receive a list, not a dict"
+        assert all(isinstance(col, list) for col in data), "each element must be a list (column)"
+        assert len(data) == 9  # 9 fields: id, document_id, source_id, user_id, text, title, url, chunk_index, embedding
+        assert data[1] == ["doc-1", "doc-1"]  # document_id column
+        assert data[4] == ["First chunk", "Second chunk"]  # text column
+        assert data[7] == [0, 1]  # chunk_index column
+
+    @pytest.mark.unit
     def test_delete_by_document(self, vector_store, mock_deps):
         vector_store.collection = mock_deps["collection"]
 
