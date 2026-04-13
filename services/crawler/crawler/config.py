@@ -19,11 +19,18 @@ class CrawlerSettings(BaseSettings):
     # The backend API URL — crawler sends fetched documents here for processing
     backend_url: str = "http://localhost:8000"
 
+    # Auth token for backend API — in dev any string works with bypass active,
+    # in prod this is a Keycloak service account token
+    api_token: str = "dev"
+
     # Concurrency limits
     max_concurrent_pages: int = 5
 
     # Request timeout in milliseconds
     request_timeout_ms: int = 30000
+
+    # How often to run a full crawl cycle (seconds). Default: 6 hours.
+    crawl_interval_seconds: int = 21600
 
     # How often to poll for sources that need crawling (seconds)
     poll_interval_seconds: int = 60

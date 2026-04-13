@@ -3,21 +3,23 @@
 # crawler/main.py
 # =============================================================================
 # Entry point for the Argus crawler service.
-# Polls the backend for sources due for crawling, fetches their content,
-# and sends it back to the backend for processing.
+# Polls the backend for active sources, crawls their content, and sends it
+# back to the backend for processing.
 #
 # Usage:
 #   python -m crawler.main
 # =============================================================================
 
+import asyncio
 import signal
-import sys
+
 import structlog
 
+from crawler.backend_client import BackendClient
 from crawler.config import get_settings
+from crawler.scheduler import run_scheduler
 
 log = structlog.get_logger()
-settings = get_settings()
 
 # Graceful shutdown flag
 _shutdown = False
@@ -29,24 +31,28 @@ def handle_signal(signum, frame):
     _shutdown = True
 
 
+async def async_main():
+    settings = get_settings()
+    log.info(
+        "Argus Crawler starting",
+        backend_url=settings.backend_url,
+        crawl_interval_seconds=settings.crawl_interval_seconds,
+    )
+
+    client = BackendClient(
+        base_url=settings.backend_url,
+        api_token=settings.api_token,
+    )
+    try:
+        await run_scheduler(client, interval_seconds=settings.crawl_interval_seconds)
+    finally:
+        await client.close()
+
+
 def main():
     signal.signal(signal.SIGINT, handle_signal)
     signal.signal(signal.SIGTERM, handle_signal)
-
-    log.info(
-        "Argus crawler starting",
-        backend_url=settings.backend_url,
-        poll_interval=settings.poll_interval_seconds,
-        max_concurrent=settings.max_concurrent_pages,
-    )
-
-    # TODO: implement crawl loop
-    # 1. GET /api/sources/?needs_crawl=true from backend
-    # 2. For each source, fetch content (Playwright for JS, httpx for static)
-    # 3. POST fetched HTML back to backend for processing
-    # 4. Sleep for poll_interval_seconds
-
-    log.info("Crawler scaffold ready — crawl loop not yet implemented")
+    asyncio.run(async_main())
 
 
 if __name__ == "__main__":
