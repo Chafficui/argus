@@ -100,6 +100,15 @@ def verify_token(
     """
     settings = get_settings()
 
+    # Dev bypass — NEVER enable in production
+    if settings.dev_auth_bypass and settings.environment == "development":
+        return TokenData(
+            user_id="dev-user-id",
+            email="dev@localhost",
+            username="dev",
+            roles=["user", "admin"],
+        )
+
     # No Authorization header at all
     if credentials is None:
         raise HTTPException(

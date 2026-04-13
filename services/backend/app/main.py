@@ -24,7 +24,7 @@ from app.core.config import get_settings
 from app.db.database import init_db, AsyncSessionLocal
 from app.services.storage import storage_service
 from app.services.vector_store import vector_store
-from app.api.routes import sources, search
+from app.api.routes import sources, search, ingest
 
 log = structlog.get_logger()
 settings = get_settings()
@@ -49,6 +49,11 @@ async def lifespan(app: FastAPI):
 
     # Connect to Milvus and ensure collection exists
     vector_store.connect()
+
+    if settings.dev_auth_bypass and settings.environment == "development":
+        log.warning(
+            "DEV AUTH BYPASS IS ACTIVE — all endpoints accept unauthenticated requests"
+        )
 
     log.info("Argus backend ready")
 
@@ -116,6 +121,7 @@ Instrumentator().instrument(app).expose(app, endpoint="/metrics")
 
 app.include_router(sources.router, prefix="/api/sources")
 app.include_router(search.router, prefix="/api/search")
+app.include_router(ingest.router, prefix="/api/ingest")
 # app.include_router(chat.router, prefix="/api/chat")
 
 

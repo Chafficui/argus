@@ -106,6 +106,13 @@ class Settings(BaseSettings):
     keycloak_audience: str = "argus-backend"
 
     # -------------------------------------------------------------------------
+    # Dev auth bypass
+    # -------------------------------------------------------------------------
+    # When True AND environment=="development", skip JWT validation entirely.
+    # NEVER enable in production — the double check prevents accidental use.
+    dev_auth_bypass: bool = False
+
+    # -------------------------------------------------------------------------
     # Crawler
     # -------------------------------------------------------------------------
     max_sources_per_user: int = 50

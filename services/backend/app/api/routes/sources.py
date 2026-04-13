@@ -17,11 +17,12 @@
 #   4. Returns a response
 # =============================================================================
 
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_
 from pydantic import BaseModel, HttpUrl
-from datetime import datetime
 import structlog
 
 from app.core.auth import verify_token, TokenData
@@ -252,3 +253,25 @@ async def delete_source(
         source
     )  # cascade="all, delete-orphan" in the model handles related records
     log.info("Deleted source", source_id=source_id, user_id=user.id)
+
+
+@router.patch("/{source_id}/last-crawled", response_model=SourceResponse)
+async def update_last_crawled(
+    source_id: str,
+    db: AsyncSession = Depends(get_db),
+    token: TokenData = Depends(verify_token),
+):
+    """Update the last_crawled_at timestamp for a source. Called by the crawler after a crawl run."""
+    user = await get_or_create_user(token, db)
+
+    result = await db.execute(
+        select(Source).where(and_(Source.id == source_id, Source.user_id == user.id))
+    )
+    source = result.scalar_one_or_none()
+
+    if source is None:
+        raise HTTPException(status_code=404, detail="Source not found")
+
+    source.last_crawled_at = datetime.now(timezone.utc)
+    log.info("Updated last_crawled_at", source_id=source_id)
+    return source
