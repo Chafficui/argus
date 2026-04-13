@@ -64,6 +64,36 @@ class BackendClient:
         response.raise_for_status()
         log.info("Updated last_crawled_at", source_id=source_id)
 
+    async def report_crawl_job(
+        self,
+        source_id: str,
+        crawl_status: str,
+        documents_found: int,
+        documents_indexed: int,
+        duration_seconds: float,
+        error_message: str | None = None,
+    ) -> str | None:
+        """Report a crawl job result to POST /api/ingest/crawl-job."""
+        payload = {
+            "source_id": source_id,
+            "status": crawl_status,
+            "documents_found": documents_found,
+            "documents_indexed": documents_indexed,
+            "duration_seconds": round(duration_seconds, 2),
+        }
+        if error_message:
+            payload["error_message"] = error_message
+
+        try:
+            response = await self.client.post("/api/ingest/crawl-job", json=payload)
+            response.raise_for_status()
+            data = response.json()
+            log.info("Reported crawl job", crawl_job_id=data["crawl_job_id"], source_id=source_id)
+            return data["crawl_job_id"]
+        except Exception as e:
+            log.warning("Failed to report crawl job", source_id=source_id, error=str(e))
+            return None
+
     async def close(self) -> None:
         """Always close the httpx client when done."""
         await self.client.aclose()

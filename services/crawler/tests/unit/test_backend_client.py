@@ -105,3 +105,65 @@ class TestUpdateLastCrawled:
         await client.update_last_crawled("src-1")
 
         client.client.patch.assert_called_once_with("/api/sources/src-1/last-crawled")
+
+
+class TestReportCrawlJob:
+
+    @pytest.mark.unit
+    async def test_posts_crawl_job_report(self, client):
+        mock_response = MagicMock()
+        mock_response.json.return_value = {"crawl_job_id": "cj-1"}
+        mock_response.raise_for_status = MagicMock()
+        client.client.post = AsyncMock(return_value=mock_response)
+
+        result = await client.report_crawl_job(
+            source_id="src-1",
+            crawl_status="success",
+            documents_found=5,
+            documents_indexed=4,
+            duration_seconds=12.345,
+        )
+
+        assert result == "cj-1"
+        call_kwargs = client.client.post.call_args
+        assert call_kwargs[0][0] == "/api/ingest/crawl-job"
+        payload = call_kwargs[1]["json"]
+        assert payload["source_id"] == "src-1"
+        assert payload["status"] == "success"
+        assert payload["documents_found"] == 5
+        assert payload["documents_indexed"] == 4
+        assert payload["duration_seconds"] == 12.35
+
+    @pytest.mark.unit
+    async def test_includes_error_message_when_provided(self, client):
+        mock_response = MagicMock()
+        mock_response.json.return_value = {"crawl_job_id": "cj-2"}
+        mock_response.raise_for_status = MagicMock()
+        client.client.post = AsyncMock(return_value=mock_response)
+
+        await client.report_crawl_job(
+            source_id="src-1",
+            crawl_status="failed",
+            documents_found=0,
+            documents_indexed=0,
+            duration_seconds=1.0,
+            error_message="Connection refused",
+        )
+
+        payload = client.client.post.call_args[1]["json"]
+        assert payload["error_message"] == "Connection refused"
+
+    @pytest.mark.unit
+    async def test_returns_none_on_error(self, client):
+        """Should swallow errors and return None instead of crashing."""
+        client.client.post = AsyncMock(side_effect=Exception("network error"))
+
+        result = await client.report_crawl_job(
+            source_id="src-1",
+            crawl_status="success",
+            documents_found=1,
+            documents_indexed=1,
+            duration_seconds=2.0,
+        )
+
+        assert result is None

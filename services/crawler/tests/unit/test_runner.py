@@ -9,6 +9,7 @@ def mock_client():
     client = AsyncMock()
     client.ingest = AsyncMock(return_value="doc-id-1")
     client.update_last_crawled = AsyncMock()
+    client.report_crawl_job = AsyncMock()
     client.get_active_sources = AsyncMock(return_value=[])
     return client
 
@@ -130,6 +131,81 @@ class TestCrawlSource:
             html=b"<html></html>",
             title="My Article Title",
         )
+
+    @pytest.mark.unit
+    async def test_reports_crawl_job_on_success(self, mock_client):
+        """report_crawl_job should be called with status='success' after clean crawl."""
+        source = make_source(source_type="website", url="https://example.com/page")
+
+        with patch("crawler.runner.smart_fetch", AsyncMock(return_value=b"<html></html>")):
+            result = await crawl_source(mock_client, source)
+
+        assert result.status == "success"
+        mock_client.report_crawl_job.assert_called_once_with(
+            source_id="src-1",
+            crawl_status="success",
+            documents_found=1,
+            documents_indexed=1,
+            duration_seconds=result.duration_seconds,
+            error_message=None,
+        )
+
+    @pytest.mark.unit
+    async def test_reports_crawl_job_on_failure(self, mock_client):
+        """report_crawl_job should be called with status='failed' when source crawl fails."""
+        source = make_source(source_type="website", url="https://example.com/page")
+
+        with patch("crawler.runner.smart_fetch", AsyncMock(side_effect=Exception("connection reset"))):
+            result = await crawl_source(mock_client, source)
+
+        assert result.status == "success"  # Individual URL failures don't set source status to failed
+        assert result.failed == 1
+        mock_client.report_crawl_job.assert_called_once()
+        call_kwargs = mock_client.report_crawl_job.call_args[1]
+        assert call_kwargs["documents_found"] == 1
+        assert call_kwargs["documents_indexed"] == 0
+
+    @pytest.mark.unit
+    async def test_reports_failed_status_on_source_level_error(self, mock_client):
+        """report_crawl_job should have status='failed' when the source itself errors."""
+        source = make_source(source_type="rss", url="https://example.com/feed.xml")
+
+        with patch("crawler.runner.fetch_rss_entries", AsyncMock(side_effect=Exception("DNS resolution failed"))):
+            result = await crawl_source(mock_client, source)
+
+        assert result.status == "failed"
+        assert result.error_message == "DNS resolution failed"
+        mock_client.report_crawl_job.assert_called_once()
+        call_kwargs = mock_client.report_crawl_job.call_args[1]
+        assert call_kwargs["crawl_status"] == "failed"
+        assert call_kwargs["error_message"] == "DNS resolution failed"
+
+    @pytest.mark.unit
+    async def test_crawl_serp_source_fetches_results(self, mock_client):
+        """SERP source type should call fetch_serp_results and ingest each result."""
+        source = make_source(
+            source_type="serp",
+            search_query="EU AI Act news",
+            url="https://google.com/search",
+        )
+
+        serp_entries = [
+            {"url": "https://example.com/1", "title": "AI Act Result 1"},
+            {"url": "https://example.com/2", "title": "AI Act Result 2"},
+            {"url": "https://example.com/3", "title": "AI Act Result 3"},
+        ]
+
+        with patch("crawler.runner.fetch_serp_results", AsyncMock(return_value=serp_entries)) as mock_serp, \
+             patch("crawler.runner.smart_fetch", AsyncMock(return_value=b"<html>content</html>")):
+            result = await crawl_source(mock_client, source)
+
+        mock_serp.assert_called_once_with(
+            query="EU AI Act news",
+            searxng_url=mock_serp.call_args[1]["searxng_url"],  # from settings
+        )
+        assert result.ingested == 3
+        assert result.failed == 0
+        assert mock_client.ingest.call_count == 3
 
 
 class TestRunCrawlCycle:
