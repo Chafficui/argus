@@ -129,7 +129,8 @@ async def main():
     # Step 2: Fetch the real webpage
     # ------------------------------------------------------------------
     print(f"\n[2/5] Fetching {TARGET_URL}...")
-    async with httpx.AsyncClient(timeout=30, follow_redirects=True) as client:
+    headers = {"User-Agent": "Argus/0.1.0 (ingest-test; +https://github.com/argus)"}
+    async with httpx.AsyncClient(timeout=30, follow_redirects=True, headers=headers) as client:
         response = await client.get(TARGET_URL)
         response.raise_for_status()
     html_content = response.content

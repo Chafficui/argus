@@ -101,10 +101,13 @@ class DocumentChunker:
         for tag in soup.find_all(noise_tags):
             tag.decompose()  # Remove from DOM
 
-        # Also remove elements with common ad/nav class names
-        noise_classes = ["nav", "menu", "sidebar", "footer", "header", "ad", "banner", "cookie"]
-        for cls in noise_classes:
-            for tag in soup.find_all(class_=re.compile(cls, re.I)):
+        # Also remove elements whose class list contains an exact noise class name.
+        # We check each CSS class individually to avoid substring false positives
+        # (e.g. "ad" matching "download" or "header" matching "in-header-enabled").
+        noise_classes = {"nav", "menu", "sidebar", "footer", "header", "ad", "banner", "cookie"}
+        for tag in soup.find_all(class_=True):
+            tag_classes = {c.lower() for c in tag.get("class", [])}
+            if tag_classes & noise_classes:
                 tag.decompose()
 
         # Try to find the main content area first

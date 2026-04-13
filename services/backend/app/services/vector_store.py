@@ -252,17 +252,17 @@ class VectorStoreService:
         embeddings = self.embed_texts(texts)
 
         # Milvus expects data as parallel lists (one list per field)
-        data = {
-            "id": chunk_ids,
-            "document_id": [c["document_id"] for c in chunks],
-            "source_id": [c["source_id"] for c in chunks],
-            "user_id": [c["user_id"] for c in chunks],
-            "text": [c["text"] for c in chunks],
-            "title": [c.get("title", "") for c in chunks],
-            "url": [c.get("url", "") for c in chunks],
-            "chunk_index": [c.get("chunk_index", 0) for c in chunks],
-            "embedding": embeddings,
-        }
+        data = [
+            chunk_ids,
+            [c["document_id"] for c in chunks],
+            [c["source_id"] for c in chunks],
+            [c["user_id"] for c in chunks],
+            [c["text"] for c in chunks],
+            [c.get("title", "") for c in chunks],
+            [c.get("url", "") for c in chunks],
+            [c.get("chunk_index", 0) for c in chunks],
+            embeddings,
+        ]
 
         self.collection.insert(data)
         # flush() makes inserts immediately searchable
