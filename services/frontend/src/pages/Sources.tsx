@@ -15,6 +15,7 @@ interface Source {
   is_active: boolean
   created_at: string
   last_crawled_at?: string | null
+  document_count: number
 }
 
 function Stat({
@@ -35,8 +36,7 @@ function Stat({
       <div className="flex items-center" style={{ gap: 6 }}>
         {live && (
           <span
-            className="pulse-core"
-            style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--core-500)' }}
+            style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--status-ok)' }}
           />
         )}
         <span
@@ -46,7 +46,7 @@ function Stat({
             fontWeight: 600,
             letterSpacing: '0.18em',
             textTransform: 'uppercase',
-            color: live ? 'var(--core-400)' : 'var(--fg-muted)',
+            color: live ? 'var(--status-ok)' : 'var(--fg-muted)',
           }}
         >
           {label}
@@ -102,6 +102,7 @@ export default function Sources() {
   }
 
   const liveSources = sources.filter((s) => s.is_active).length
+  const totalDocs = sources.reduce((sum, s) => sum + s.document_count, 0)
 
   return (
     <div style={{ padding: '28px 36px 40px', maxWidth: 1100, margin: '0 auto' }}>
@@ -146,23 +147,17 @@ export default function Sources() {
         >
           <Stat label="Sources" value={sources.length} hint="monitored" />
           <Stat label="Active" value={liveSources} hint="crawling now" live />
-          <Stat label="Docs" value="—" hint="indexed · total" />
-          <Stat label="Tokens" value="—" hint="estimated" mono />
+          <Stat label="Docs" value={totalDocs} hint="indexed · total" />
+          <Stat label="Tokens" value={totalDocs > 0 ? `~${Math.round(totalDocs * 1.2)}k` : '0'} hint="estimated" mono />
         </div>
       )}
 
       {/* Source list */}
       {loading ? (
         <div className="flex items-center justify-center" style={{ padding: '80px 0' }}>
-          <div
-            className="pulse-core"
-            style={{
-              width: 8,
-              height: 8,
-              borderRadius: '50%',
-              background: 'var(--core-500)',
-            }}
-          />
+          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--fg-subtle)' }}>
+            Loading...
+          </span>
         </div>
       ) : sources.length === 0 ? (
         <div className="text-center" style={{ padding: '80px 0' }}>

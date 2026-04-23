@@ -119,7 +119,7 @@ export default function Layout() {
 
         <div className="flex-1" />
 
-        {/* Live crawl status rail */}
+        {/* Crawl status */}
         <div
           style={{
             border: '1px solid var(--line-default)',
@@ -127,18 +127,15 @@ export default function Layout() {
             padding: '12px 14px',
             background: 'var(--bg-surface-2)',
             marginBottom: 12,
-            position: 'relative',
-            overflow: 'hidden',
           }}
         >
           <div className="flex items-center" style={{ gap: 8, marginBottom: 8 }}>
             <span
-              className="pulse-core"
               style={{
                 width: 6,
                 height: 6,
                 borderRadius: '50%',
-                background: 'var(--core-500)',
+                background: liveCrawls > 0 ? 'var(--status-ok)' : 'var(--fg-subtle)',
               }}
             />
             <span
@@ -148,10 +145,10 @@ export default function Layout() {
                 fontWeight: 600,
                 letterSpacing: '0.18em',
                 textTransform: 'uppercase',
-                color: 'var(--core-400)',
+                color: 'var(--fg-muted)',
               }}
             >
-              Live · crawling
+              Crawler
             </span>
           </div>
           <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--fg-muted)', lineHeight: 1.6 }}>
@@ -159,30 +156,6 @@ export default function Layout() {
             <div style={{ color: 'var(--fg-subtle)' }}>
               {sourceCount != null ? `${String(sourceCount).padStart(2, '0')} monitored` : '...'}
             </div>
-          </div>
-          {/* Scan-sweep bar */}
-          <div
-            style={{
-              position: 'absolute',
-              left: 0,
-              right: 0,
-              bottom: 0,
-              height: 1,
-              background: 'var(--line-hairline)',
-              overflow: 'hidden',
-            }}
-          >
-            <div
-              style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                width: '40%',
-                height: '100%',
-                background: 'linear-gradient(90deg, transparent, var(--core-500), transparent)',
-                animation: 'scan-sweep 2.4s ease-in-out infinite',
-              }}
-            />
           </div>
         </div>
 
