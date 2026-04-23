@@ -254,6 +254,7 @@ services:
     container_name: argus-promtail
     volumes:
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./infra/promtail.yml:/etc/promtail/config.yml:ro
     depends_on:
       loki:

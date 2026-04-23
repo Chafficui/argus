@@ -18,5 +18,27 @@ scrape_configs:
           __path__: /var/lib/docker/containers/*/*-json.log
     pipeline_stages:
       - docker: {}
+      - regex:
+          source: filename
+          expression: "/var/lib/docker/containers/(?P<container_id>[a-f0-9]+)/"
+      - labels:
+          container_id:
       - labeldrop:
           - filename
+
+  - job_name: docker-names
+    docker_sd_configs:
+      - host: unix:///var/run/docker.sock
+        refresh_interval: 10s
+    relabel_configs:
+      - source_labels: ["__meta_docker_container_name"]
+        target_label: container_name
+        regex: "/?(.*)"
+      - source_labels: ["__meta_docker_container_log_stream"]
+        target_label: stream
+      - action: replace
+        replacement: /var/lib/docker/containers/$1/*-json.log
+        source_labels: ["__meta_docker_container_id"]
+        target_label: __path__
+    pipeline_stages:
+      - docker: {}
