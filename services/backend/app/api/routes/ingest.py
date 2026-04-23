@@ -159,7 +159,9 @@ class CrawlJobResponse(BaseModel):
     crawl_job_id: str
 
 
-@router.post("/crawl-job", response_model=CrawlJobResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/crawl-job", response_model=CrawlJobResponse, status_code=status.HTTP_201_CREATED
+)
 async def report_crawl_job(
     body: CrawlJobReport,
     db: AsyncSession = Depends(get_db),
@@ -184,7 +186,9 @@ async def report_crawl_job(
             detail="Source not found or does not belong to this user",
         )
 
-    crawl_status = CrawlStatus.SUCCESS if body.status == "success" else CrawlStatus.FAILED
+    crawl_status = (
+        CrawlStatus.SUCCESS if body.status == "success" else CrawlStatus.FAILED
+    )
     now = datetime.now(timezone.utc)
 
     job = CrawlJob(
