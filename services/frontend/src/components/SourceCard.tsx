@@ -1,5 +1,8 @@
 import { useState } from 'react'
 import api from '../api/client'
+import { CornerBrackets } from './Brand'
+import SourceTypeBadge from './SourceTypeBadge'
+import { IconRefresh, IconExternal, IconTrash } from './Icons'
 
 interface CrawlJob {
   id: string
@@ -33,10 +36,42 @@ function timeAgo(dateStr: string): string {
   return `${days}d ago`
 }
 
-const typeBadgeColors: Record<string, string> = {
-  website: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-  rss: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
-  serp: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
+function IconBtn({
+  children,
+  onClick,
+  title,
+  danger,
+}: {
+  children: React.ReactNode
+  onClick?: () => void
+  title: string
+  danger?: boolean
+}) {
+  return (
+    <button
+      onClick={(e) => {
+        e.stopPropagation()
+        onClick?.()
+      }}
+      title={title}
+      className={`inline-flex items-center justify-center transition-all duration-150 ${
+        danger
+          ? 'hover:bg-[rgba(248,113,113,0.1)] hover:text-[var(--status-alert)] hover:border-[rgba(248,113,113,0.3)]'
+          : 'hover:bg-[var(--signal-500-a10)] hover:text-[var(--signal-300)] hover:border-[var(--signal-500-a30)]'
+      }`}
+      style={{
+        width: 26,
+        height: 26,
+        background: 'transparent',
+        color: 'var(--fg-muted)',
+        border: '1px solid transparent',
+        borderRadius: 'var(--radius-sm)',
+        cursor: 'pointer',
+      }}
+    >
+      {children}
+    </button>
+  )
 }
 
 export default function SourceCard({
@@ -46,10 +81,10 @@ export default function SourceCard({
   source: Source
   onDelete: (id: string) => void
 }) {
+  const [hover, setHover] = useState(false)
   const [showHistory, setShowHistory] = useState(false)
   const [crawlJobs, setCrawlJobs] = useState<CrawlJob[]>([])
   const [loadingHistory, setLoadingHistory] = useState(false)
-  const [confirmDelete, setConfirmDelete] = useState(false)
 
   const loadCrawlHistory = async () => {
     if (showHistory) {
@@ -69,11 +104,6 @@ export default function SourceCard({
   }
 
   const handleDelete = async () => {
-    if (!confirmDelete) {
-      setConfirmDelete(true)
-      setTimeout(() => setConfirmDelete(false), 3000)
-      return
-    }
     try {
       await api.delete(`/api/sources/${source.id}`)
       onDelete(source.id)
@@ -82,90 +112,240 @@ export default function SourceCard({
     }
   }
 
+  const handleRefresh = async () => {
+    try {
+      await api.post(`/api/sources/${source.id}/crawl`)
+    } catch (err) {
+      console.error('Failed to trigger crawl', err)
+    }
+  }
+
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
-      <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2 mb-1">
-            <h3 className="text-sm font-semibold text-white truncate">{source.name}</h3>
-            <span
-              className={`px-2 py-0.5 text-xs font-medium rounded-full border ${
-                typeBadgeColors[source.source_type] || 'bg-slate-700 text-slate-300'
-              }`}
-            >
-              {source.source_type}
-            </span>
-          </div>
-          <a
-            href={source.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-xs text-slate-500 hover:text-blue-400 transition-colors truncate block"
-          >
-            {source.url.length > 60 ? source.url.slice(0, 60) + '...' : source.url}
-          </a>
-          {source.search_query && (
-            <p className="text-xs text-purple-400 mt-1">Query: {source.search_query}</p>
-          )}
+    <div
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      style={{
+        position: 'relative',
+        background: hover ? 'var(--bg-surface-hover)' : 'var(--bg-surface-2)',
+        border: `1px solid ${hover ? 'var(--line-strong)' : 'var(--line-default)'}`,
+        borderRadius: 'var(--radius-xl)',
+        padding: '18px 20px 20px',
+        display: 'grid',
+        gridTemplateColumns: '1fr auto',
+        gap: '14px 20px',
+        transition: 'all 150ms cubic-bezier(0.2, 0.8, 0.2, 1)',
+        overflow: 'hidden',
+      }}
+    >
+      {hover && <CornerBrackets opacity={0.6} />}
+
+      {/* Left column */}
+      <div>
+        <div
+          style={{
+            fontFamily: 'var(--font-display)',
+            fontSize: 16,
+            fontWeight: 600,
+            color: 'var(--fg-bright)',
+            letterSpacing: '0.02em',
+          }}
+        >
+          {source.name}
+        </div>
+        <div
+          style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: 12,
+            color: 'var(--fg-muted)',
+            marginTop: 4,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {source.url}
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
-          <button
-            onClick={handleDelete}
-            className={`px-2.5 py-1 text-xs rounded-lg transition-colors ${
-              confirmDelete
-                ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
-                : 'text-slate-500 hover:text-red-400 hover:bg-slate-800'
-            }`}
+        <div className="flex items-center flex-wrap" style={{ gap: 8, marginTop: 12 }}>
+          <SourceTypeBadge type={source.source_type} size="sm" />
+          <span
+            className={source.is_active ? 'pulse-core' : ''}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '2px 8px',
+              borderRadius: 'var(--radius-pill)',
+              background: source.is_active ? 'rgba(34,211,238,0.08)' : 'var(--status-ok-a10)',
+              color: source.is_active ? 'var(--core-400)' : 'var(--status-ok)',
+              border: `1px solid ${source.is_active ? 'rgba(34,211,238,0.25)' : 'rgba(52,211,153,0.25)'}`,
+              fontFamily: 'var(--font-display)',
+              fontSize: 10,
+              fontWeight: 600,
+              letterSpacing: '0.1em',
+              textTransform: 'uppercase',
+            }}
           >
-            {confirmDelete ? 'Confirm?' : 'Delete'}
-          </button>
+            <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'currentColor' }} />
+            {source.is_active ? 'Live' : 'Synced'}
+          </span>
+          {source.search_query && (
+            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--fg-muted)' }}>
+              <span style={{ color: 'var(--type-serp)', marginRight: 4 }}>?</span>
+              {source.search_query}
+            </span>
+          )}
         </div>
       </div>
 
-      {/* Footer */}
-      <div className="flex items-center justify-between mt-4 pt-3 border-t border-slate-800">
-        <div className="flex items-center gap-4 text-xs text-slate-500">
-          <span>
-            Last crawled:{' '}
-            {source.last_crawled_at ? timeAgo(source.last_crawled_at) : 'never'}
-          </span>
-          <span
-            className={`w-2 h-2 rounded-full ${source.is_active ? 'bg-emerald-400' : 'bg-slate-600'}`}
+      {/* Right column — stats */}
+      <div className="flex flex-col items-end" style={{ gap: 4 }}>
+        <div
+          style={{
+            fontFamily: 'var(--font-display)',
+            fontSize: 26,
+            fontWeight: 600,
+            color: 'var(--fg-bright)',
+            letterSpacing: '0.02em',
+            lineHeight: 1,
+          }}
+        >
+          —
+        </div>
+        <div
+          style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: 10,
+            color: 'var(--fg-subtle)',
+            letterSpacing: '0.08em',
+            textTransform: 'uppercase',
+          }}
+        >
+          docs indexed
+        </div>
+        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--fg-muted)', marginTop: 4 }}>
+          {source.last_crawled_at ? timeAgo(source.last_crawled_at) : 'never'}
+        </div>
+      </div>
+
+      {/* Hover actions */}
+      {hover && (
+        <div
+          className="flex"
+          style={{ position: 'absolute', top: 14, right: 16, gap: 4 }}
+        >
+          <IconBtn title="Refresh now" onClick={handleRefresh}>
+            <IconRefresh size={14} />
+          </IconBtn>
+          <IconBtn title="Open source" onClick={() => window.open(source.url, '_blank')}>
+            <IconExternal size={14} />
+          </IconBtn>
+          <IconBtn title="Remove" danger onClick={handleDelete}>
+            <IconTrash size={14} />
+          </IconBtn>
+        </div>
+      )}
+
+      {/* Live scan-sweep bar */}
+      {source.is_active && (
+        <div
+          style={{
+            position: 'absolute',
+            left: 20,
+            right: 20,
+            bottom: 10,
+            height: 1,
+            background: 'var(--line-hairline)',
+            overflow: 'hidden',
+            gridColumn: '1 / -1',
+          }}
+        >
+          <div
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '40%',
+              height: '100%',
+              background: 'linear-gradient(90deg, transparent, var(--core-500), transparent)',
+              animation: 'scan-sweep 2.4s ease-in-out infinite',
+            }}
           />
+        </div>
+      )}
+
+      {/* Crawl history toggle */}
+      <div
+        className="flex items-center justify-between"
+        style={{
+          gridColumn: '1 / -1',
+          paddingTop: 14,
+          borderTop: '1px solid var(--line-hairline)',
+        }}
+      >
+        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--fg-subtle)' }}>
+          Added {timeAgo(source.created_at)}
         </div>
         <button
           onClick={loadCrawlHistory}
           disabled={loadingHistory}
-          className="text-xs text-slate-400 hover:text-blue-400 transition-colors"
+          style={{
+            fontFamily: 'var(--font-display)',
+            fontSize: 10,
+            fontWeight: 600,
+            letterSpacing: '0.1em',
+            textTransform: 'uppercase',
+            color: 'var(--signal-400)',
+            background: 'transparent',
+            border: 'none',
+            cursor: 'pointer',
+            transition: 'color 150ms',
+          }}
         >
           {loadingHistory ? 'Loading...' : showHistory ? 'Hide history' : 'Crawl history'}
         </button>
       </div>
 
-      {/* Crawl history */}
+      {/* Crawl history rows */}
       {showHistory && (
-        <div className="mt-3 space-y-2">
+        <div className="flex flex-col" style={{ gridColumn: '1 / -1', gap: 4 }}>
           {crawlJobs.length === 0 ? (
-            <p className="text-xs text-slate-600">No crawl jobs yet</p>
+            <p style={{ fontSize: 11, color: 'var(--fg-faint)' }}>No crawl jobs yet</p>
           ) : (
             crawlJobs.map((job) => (
               <div
                 key={job.id}
-                className="flex items-center gap-3 px-3 py-2 bg-slate-800/50 rounded-lg text-xs"
+                className="flex items-center"
+                style={{
+                  gap: 12,
+                  padding: '8px 12px',
+                  background: 'var(--bg-surface-3)',
+                  borderRadius: 'var(--radius-md)',
+                  border: '1px solid var(--line-hairline)',
+                }}
               >
                 <span
-                  className={`w-2 h-2 rounded-full shrink-0 ${
-                    job.status === 'success' ? 'bg-emerald-400' : 'bg-red-400'
-                  }`}
+                  style={{
+                    width: 5,
+                    height: 5,
+                    borderRadius: '50%',
+                    flexShrink: 0,
+                    background: job.status === 'success' ? 'var(--status-ok)' : 'var(--status-alert)',
+                  }}
                 />
-                <span className="text-slate-400">{timeAgo(job.started_at)}</span>
-                <span className="text-slate-500">
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--fg-muted)' }}>
+                  {timeAgo(job.started_at)}
+                </span>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--fg-subtle)' }}>
                   {job.documents_indexed}/{job.documents_found} docs
                 </span>
-                <span className="text-slate-600">{job.duration_seconds.toFixed(1)}s</span>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--fg-faint)' }}>
+                  {job.duration_seconds.toFixed(1)}s
+                </span>
                 {job.error_message && (
-                  <span className="text-red-400 truncate">{job.error_message}</span>
+                  <span className="truncate" style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--status-alert)' }}>
+                    {job.error_message}
+                  </span>
                 )}
               </div>
             ))

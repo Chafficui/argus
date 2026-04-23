@@ -1,1 +1,105 @@
+@import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
 @import "tailwindcss";
+
+:root {
+  /* ─── Surfaces (Deep-navy scale, dark-only) ─────────────────────────── */
+  --bg-void:       #02040F;
+  --bg-surface-1:  #070A1A;
+  --bg-surface-2:  #0C1128;
+  --bg-surface-3:  #121735;
+  --bg-surface-hover: #171C3E;
+
+  /* ─── Lines (blue-tinted, never grey) ───────────────────────────────── */
+  --line-hairline:  rgba(76, 130, 255, 0.08);
+  --line-default:   rgba(76, 130, 255, 0.15);
+  --line-strong:    rgba(76, 130, 255, 0.28);
+  --line-active:    #3B82F6;
+
+  /* ─── Foreground (cool white → steel) ───────────────────────────────── */
+  --fg-bright:    #F5F8FF;
+  --fg-body:      #C9D0E3;
+  --fg-muted:     #7A86A8;
+  --fg-subtle:    #525E82;
+  --fg-faint:     #39416A;
+
+  /* ─── Signal colors ─────────────────────────────────────────────────── */
+  --signal-500:    #3B82F6;
+  --signal-400:    #60A5FA;
+  --signal-300:    #93C5FD;
+  --signal-500-a10: rgba(59, 130, 246, 0.10);
+  --signal-500-a20: rgba(59, 130, 246, 0.20);
+  --signal-500-a30: rgba(59, 130, 246, 0.30);
+
+  /* Core — bright cyan from logo's glowing eye */
+  --core-500:      #22D3EE;
+  --core-400:      #67E8F9;
+  --core-glow:     0 0 12px rgba(34, 211, 238, 0.55),
+                   0 0 32px rgba(34, 211, 238, 0.22);
+
+  /* Status */
+  --status-ok:     #34D399;
+  --status-warn:   #FBBF24;
+  --status-alert:  #F87171;
+  --status-info:   var(--signal-400);
+  --status-ok-a10:    rgba(52, 211, 153, 0.10);
+  --status-warn-a10:  rgba(251, 191, 36, 0.10);
+  --status-alert-a10: rgba(248, 113, 113, 0.10);
+
+  /* Source-type accents */
+  --type-website: var(--signal-400);
+  --type-rss:     #FB923C;
+  --type-serp:    #C084FC;
+
+  /* ─── Type families ─────────────────────────────────────────────────── */
+  --font-display: 'Chakra Petch', 'Exo 2', ui-sans-serif, system-ui, sans-serif;
+  --font-sans:    'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono:    'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* ─── Radii ─────────────────────────────────────────────────────────── */
+  --radius-xs:   2px;
+  --radius-sm:   4px;
+  --radius-md:   6px;
+  --radius-lg:   8px;
+  --radius-xl:   12px;
+  --radius-pill: 9999px;
+
+  /* ─── Elevation ─────────────────────────────────────────────────────── */
+  --shadow-modal:  0 24px 64px -12px rgba(0, 0, 0, 0.8),
+                   0 0 0 1px rgba(59, 130, 246, 0.3);
+  --glow-core:     var(--core-glow);
+  --glow-signal:   0 0 0 1px rgba(59, 130, 246, 0.4),
+                   0 0 20px rgba(59, 130, 246, 0.25);
+
+  /* ─── Motion ────────────────────────────────────────────────────────── */
+  --duration-fast:   150ms;
+  --duration-normal: 240ms;
+  --ease-out:        cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-in-out:     cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+html, body {
+  background: var(--bg-void);
+  color: var(--fg-body);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Pulsing "live" indicator */
+@keyframes pulse-core {
+  0%, 100% { opacity: 1; box-shadow: 0 0 8px rgba(34, 211, 238, 0.6), 0 0 20px rgba(34, 211, 238, 0.25); }
+  50%      { opacity: 0.7; box-shadow: 0 0 4px rgba(34, 211, 238, 0.3), 0 0 12px rgba(34, 211, 238, 0.15); }
+}
+.pulse-core { animation: pulse-core 2s var(--ease-in-out) infinite; }
+
+/* Scan-sweep — moving gradient on live-crawl bars */
+@keyframes scan-sweep {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+/* Streaming cursor blink */
+@keyframes cursor-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}

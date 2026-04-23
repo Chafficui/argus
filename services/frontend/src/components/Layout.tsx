@@ -1,71 +1,257 @@
+import { useState, useEffect } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
+import { Brand } from './Brand'
+import { IconSearch, IconSources, IconChat, IconSettings } from './Icons'
+import api from '../api/client'
 
 const navItems = [
-  { to: '/', label: 'Sources', icon: 'M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z' },
-  { to: '/search', label: 'Search', icon: 'M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z' },
-  { to: '/chat', label: 'Chat', icon: 'M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193-.34.027-.68.052-1.02.072v3.091l-3-3c-1.354 0-2.694-.055-4.02-.163a2.115 2.115 0 01-.825-.242m9.345-8.334a2.126 2.126 0 00-.476-.095 48.64 48.64 0 00-8.048 0c-1.131.094-1.976 1.057-1.976 2.192v4.286c0 .837.46 1.58 1.155 1.951m9.345-8.334V6.637c0-1.621-1.152-3.026-2.76-3.235A48.455 48.455 0 0011.25 3c-2.115 0-4.198.137-6.24.402-1.608.209-2.76 1.614-2.76 3.235v6.226c0 1.621 1.152 3.026 2.76 3.235.577.075 1.157.14 1.74.194V21l4.155-4.155' },
+  { to: '/search', label: 'Search', Icon: IconSearch },
+  { to: '/', label: 'Sources', Icon: IconSources, showCount: true },
+  { to: '/chat', label: 'Chat', Icon: IconChat },
 ]
 
 export default function Layout() {
   const { user, logout } = useAuth()
+  const [sourceCount, setSourceCount] = useState<number | null>(null)
+  const [liveCrawls, setLiveCrawls] = useState(0)
+
+  useEffect(() => {
+    api.get('/api/sources/').then((res) => {
+      setSourceCount(res.data.length)
+      setLiveCrawls(res.data.filter((s: { is_active: boolean }) => s.is_active).length)
+    }).catch(() => {})
+  }, [])
 
   return (
-    <div className="flex h-screen bg-slate-950 text-slate-200">
+    <div className="flex h-screen" style={{ background: 'var(--bg-void)', color: 'var(--fg-body)' }}>
       {/* Sidebar */}
-      <aside className="w-64 bg-slate-900 border-r border-slate-800 flex flex-col">
-        {/* Logo */}
-        <div className="p-6 border-b border-slate-800">
-          <h1 className="text-xl font-bold text-white tracking-tight">
-            <span className="text-blue-500">A</span>rgus
-          </h1>
-          <p className="text-xs text-slate-500 mt-1">AI Research Platform</p>
+      <aside
+        style={{
+          width: 240,
+          flexShrink: 0,
+          background: 'var(--bg-surface-1)',
+          borderRight: '1px solid var(--line-default)',
+          display: 'flex',
+          flexDirection: 'column',
+          padding: '22px 14px 14px',
+          height: '100vh',
+          boxSizing: 'border-box',
+        }}
+      >
+        {/* Brand */}
+        <div style={{ padding: '0 6px 22px', borderBottom: '1px solid var(--line-hairline)', marginBottom: 14 }}>
+          <Brand size={32} />
+        </div>
+
+        {/* Section label */}
+        <div
+          style={{
+            fontFamily: 'var(--font-display)',
+            fontSize: 10,
+            fontWeight: 600,
+            letterSpacing: '0.22em',
+            textTransform: 'uppercase',
+            color: 'var(--fg-faint)',
+            padding: '0 14px 8px',
+          }}
+        >
+          Workspace
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 p-4 space-y-1">
+        <nav className="flex flex-col" style={{ gap: 2 }}>
           {navItems.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                  isActive
-                    ? 'bg-blue-500/10 text-blue-400'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
-                }`
-              }
+              end={item.to === '/'}
+              className="group"
             >
-              <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" d={item.icon} />
-              </svg>
-              {item.label}
+              {({ isActive }) => (
+                <div
+                  className="relative flex items-center"
+                  style={{
+                    gap: 12,
+                    padding: '10px 14px',
+                    borderRadius: 'var(--radius-md)',
+                    fontFamily: 'var(--font-sans)',
+                    fontSize: 13,
+                    fontWeight: 500,
+                    cursor: 'pointer',
+                    transition: 'all 150ms cubic-bezier(0.2, 0.8, 0.2, 1)',
+                    background: isActive ? 'var(--signal-500-a10)' : 'transparent',
+                    color: isActive ? 'var(--signal-300)' : 'var(--fg-muted)',
+                  }}
+                >
+                  {isActive && (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        left: 0,
+                        top: 8,
+                        bottom: 8,
+                        width: 2,
+                        background: 'var(--signal-500)',
+                        borderRadius: 1,
+                      }}
+                    />
+                  )}
+                  <item.Icon size={16} />
+                  <span>{item.label}</span>
+                  {item.showCount && sourceCount != null && (
+                    <span
+                      className="ml-auto"
+                      style={{
+                        fontFamily: 'var(--font-mono)',
+                        fontSize: 11,
+                        color: isActive ? 'var(--signal-400)' : 'var(--fg-subtle)',
+                      }}
+                    >
+                      {String(sourceCount).padStart(2, '0')}
+                    </span>
+                  )}
+                </div>
+              )}
             </NavLink>
           ))}
         </nav>
 
+        <div className="flex-1" />
+
+        {/* Live crawl status rail */}
+        <div
+          style={{
+            border: '1px solid var(--line-default)',
+            borderRadius: 'var(--radius-lg)',
+            padding: '12px 14px',
+            background: 'var(--bg-surface-2)',
+            marginBottom: 12,
+            position: 'relative',
+            overflow: 'hidden',
+          }}
+        >
+          <div className="flex items-center" style={{ gap: 8, marginBottom: 8 }}>
+            <span
+              className="pulse-core"
+              style={{
+                width: 6,
+                height: 6,
+                borderRadius: '50%',
+                background: 'var(--core-500)',
+              }}
+            />
+            <span
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: 10,
+                fontWeight: 600,
+                letterSpacing: '0.18em',
+                textTransform: 'uppercase',
+                color: 'var(--core-400)',
+              }}
+            >
+              Live · crawling
+            </span>
+          </div>
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--fg-muted)', lineHeight: 1.6 }}>
+            <div>{String(liveCrawls).padStart(2, '0')} sources active</div>
+            <div style={{ color: 'var(--fg-subtle)' }}>
+              {sourceCount != null ? `${String(sourceCount).padStart(2, '0')} monitored` : '...'}
+            </div>
+          </div>
+          {/* Scan-sweep bar */}
+          <div
+            style={{
+              position: 'absolute',
+              left: 0,
+              right: 0,
+              bottom: 0,
+              height: 1,
+              background: 'var(--line-hairline)',
+              overflow: 'hidden',
+            }}
+          >
+            <div
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '40%',
+                height: '100%',
+                background: 'linear-gradient(90deg, transparent, var(--core-500), transparent)',
+                animation: 'scan-sweep 2.4s ease-in-out infinite',
+              }}
+            />
+          </div>
+        </div>
+
+        {/* Settings */}
+        <div
+          className="flex items-center"
+          style={{
+            gap: 12,
+            padding: '10px 14px',
+            borderRadius: 'var(--radius-md)',
+            fontFamily: 'var(--font-sans)',
+            fontSize: 13,
+            fontWeight: 500,
+            color: 'var(--fg-muted)',
+            cursor: 'pointer',
+            transition: 'all 150ms',
+          }}
+        >
+          <IconSettings size={16} />
+          <span>Settings</span>
+        </div>
+
         {/* User */}
-        <div className="p-4 border-t border-slate-800">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400 text-sm font-medium">
+        <div style={{ padding: '12px 8px 0', borderTop: '1px solid var(--line-hairline)', marginTop: 8 }}>
+          <div className="flex items-center" style={{ gap: 10 }}>
+            <div
+              className="flex items-center justify-center shrink-0"
+              style={{
+                width: 28,
+                height: 28,
+                borderRadius: 'var(--radius-md)',
+                background: 'var(--signal-500-a10)',
+                border: '1px solid var(--signal-500-a20)',
+                color: 'var(--signal-300)',
+                fontFamily: 'var(--font-display)',
+                fontSize: 12,
+                fontWeight: 600,
+              }}
+            >
               {user?.name?.[0]?.toUpperCase() || '?'}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-slate-200 truncate">{user?.name}</p>
-              <p className="text-xs text-slate-500 truncate">{user?.email}</p>
+              <p className="truncate" style={{ fontSize: 12, fontWeight: 500, color: 'var(--fg-bright)', margin: 0 }}>
+                {user?.name}
+              </p>
             </div>
+            <button
+              onClick={logout}
+              style={{
+                fontSize: 10,
+                fontFamily: 'var(--font-display)',
+                fontWeight: 600,
+                letterSpacing: '0.1em',
+                textTransform: 'uppercase',
+                color: 'var(--fg-subtle)',
+                background: 'transparent',
+                border: 'none',
+                cursor: 'pointer',
+                transition: 'color 150ms',
+              }}
+            >
+              Sign out
+            </button>
           </div>
-          <button
-            onClick={logout}
-            className="mt-3 w-full px-3 py-1.5 text-xs text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-lg transition-colors"
-          >
-            Sign out
-          </button>
         </div>
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 overflow-auto">
+      <main className="flex-1 overflow-auto" style={{ background: 'var(--bg-void)' }}>
         <Outlet />
       </main>
     </div>

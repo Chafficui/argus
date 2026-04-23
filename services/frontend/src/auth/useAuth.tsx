@@ -53,10 +53,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   if (!initialized) {
     return (
-      <div className="flex items-center justify-center h-screen bg-slate-950 text-slate-400">
+      <div
+        className="flex items-center justify-center h-screen"
+        style={{ background: 'var(--bg-void)', color: 'var(--fg-muted)' }}
+      >
         <div className="text-center">
-          <div className="animate-spin w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full mx-auto mb-4" />
-          Connecting to identity provider...
+          <div
+            className="pulse-core mx-auto"
+            style={{
+              width: 10,
+              height: 10,
+              borderRadius: '50%',
+              background: 'var(--core-500)',
+              marginBottom: 16,
+            }}
+          />
+          <div style={{ fontFamily: 'var(--font-display)', fontSize: 11, fontWeight: 600, letterSpacing: '0.18em', textTransform: 'uppercase' }}>
+            Connecting...
+          </div>
         </div>
       </div>
     )
