@@ -21,13 +21,13 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_
+from sqlalchemy import select, and_, func
 from pydantic import BaseModel, HttpUrl
 import structlog
 
 from app.core.auth import verify_token, TokenData
 from app.db.database import get_db
-from app.models.models import Source, User, SourceType, CrawlJob, CrawlStatus
+from app.models.models import Source, User, SourceType, CrawlJob, CrawlStatus, Document
 from app.core.config import get_settings
 from app.services.vector_store import vector_store
 from app.services.metrics import active_sources_gauge
@@ -77,6 +77,7 @@ class SourceResponse(BaseModel):
     crawl_interval_hours: int
     last_crawled_at: datetime | None
     created_at: datetime
+    document_count: int = 0
 
     # This tells Pydantic to read from SQLAlchemy model attributes
     model_config = {"from_attributes": True}
@@ -123,12 +124,26 @@ async def list_sources(
     """List all sources for the authenticated user."""
     user = await get_or_create_user(token, db)
 
+    # Subquery to count documents per source
+    doc_count_sub = (
+        select(Document.source_id, func.count(Document.id).label("document_count"))
+        .group_by(Document.source_id)
+        .subquery()
+    )
+
     result = await db.execute(
-        select(Source)
+        select(Source, func.coalesce(doc_count_sub.c.document_count, 0).label("document_count"))
+        .outerjoin(doc_count_sub, Source.id == doc_count_sub.c.source_id)
         .where(Source.user_id == user.id)
         .order_by(Source.created_at.desc())
     )
-    sources = result.scalars().all()
+    rows = result.all()
+
+    sources = []
+    for source, doc_count in rows:
+        resp = SourceResponse.model_validate(source)
+        resp.document_count = doc_count
+        sources.append(resp)
 
     log.info("Listed sources", user_id=user.id, count=len(sources))
     return sources

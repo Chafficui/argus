@@ -20,8 +20,9 @@ based ONLY on the provided context. Follow these rules strictly:
 1. Only use information from the context below. Do not use prior knowledge.
 2. If the context does not contain enough information to answer, say so clearly.
 3. Cite your sources by referencing the title and URL when available.
-4. Be concise and factual. Prefer bullet points for multi-part answers.
-5. If multiple sources agree, synthesize them. If they conflict, note the disagreement."""
+4. Be concise and factual.
+5. If multiple sources agree, synthesize them. If they conflict, note the disagreement.
+6. Format your response in proper markdown. For lists, always use "- " (dash space) at the start of each line, never inline bullet characters."""
 
 
 class LLMService:
