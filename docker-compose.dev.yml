@@ -150,9 +150,82 @@ services:
       timeout: 5s
       retries: 5
 
+  # --------------------------------------------------------------------------
+  # Prometheus — metrics collection and time-series storage
+  # Scrapes /metrics from the backend every 15s
+  # --------------------------------------------------------------------------
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: argus-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./infra/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:9090/-/healthy || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # --------------------------------------------------------------------------
+  # Grafana — dashboards and visualization for metrics and logs
+  # Login: admin / admin
+  # --------------------------------------------------------------------------
+  grafana:
+    image: grafana/grafana:latest
+    container_name: argus-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+    volumes:
+      - ./infra/grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      prometheus:
+        condition: service_healthy
+
+  # --------------------------------------------------------------------------
+  # Loki — log aggregation backend, queried by Grafana
+  # --------------------------------------------------------------------------
+  loki:
+    image: grafana/loki:latest
+    container_name: argus-loki
+    ports:
+      - "3100:3100"
+    volumes:
+      - loki_data:/loki
+    healthcheck:
+      # Loki distroless image has no shell/curl/wget — use TCP port check
+      test: ["CMD", "/usr/bin/loki", "-config.file=/etc/loki/local-config.yaml", "-verify-config"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 45s
+
+  # --------------------------------------------------------------------------
+  # Promtail — ships Docker container logs to Loki
+  # --------------------------------------------------------------------------
+  promtail:
+    image: grafana/promtail:latest
+    container_name: argus-promtail
+    volumes:
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - ./infra/promtail.yml:/etc/promtail/config.yml:ro
+    depends_on:
+      loki:
+        condition: service_healthy
+
 volumes:
   postgres_data:
   etcd_data:
   minio_data:
   milvus_data:
   ollama_data:
+  prometheus_data:
+  grafana_data:
+  loki_data:
