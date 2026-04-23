@@ -22,6 +22,7 @@ from app.core.auth import verify_token, TokenData
 from app.db.database import get_db
 from app.models.models import Source, Document, DocumentStatus, CrawlJob, CrawlStatus
 from app.services.processor import processor
+from app.services.metrics import crawl_jobs_total, crawl_duration_seconds
 
 log = structlog.get_logger()
 
@@ -203,6 +204,17 @@ async def report_crawl_job(
     )
     db.add(job)
     await db.flush()
+
+    # Record Prometheus metrics
+    source_type = (
+        source.source_type.value
+        if hasattr(source.source_type, "value")
+        else str(source.source_type)
+    )
+    crawl_jobs_total.labels(status=body.status, source_type=source_type).inc()
+    crawl_duration_seconds.labels(source_type=source_type).observe(
+        body.duration_seconds
+    )
 
     log.info(
         "CrawlJob recorded",

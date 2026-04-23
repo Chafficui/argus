@@ -17,8 +17,11 @@ import structlog
 
 from crawler.backend_client import BackendClient
 from crawler.config import get_settings
+from crawler.logging_config import configure_logging
 from crawler.scheduler import run_scheduler
 
+settings = get_settings()
+configure_logging(environment="production", log_level=settings.log_level)
 log = structlog.get_logger()
 
 # Graceful shutdown flag

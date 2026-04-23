@@ -21,13 +21,15 @@ import httpx
 from sqlalchemy import text
 
 from app.core.config import get_settings
+from app.core.logging import configure_logging
 from app.db.database import init_db, AsyncSessionLocal
 from app.services.storage import storage_service
 from app.services.vector_store import vector_store
 from app.api.routes import sources, search, ingest
 
-log = structlog.get_logger()
 settings = get_settings()
+configure_logging(environment=settings.environment, log_level=settings.log_level)
+log = structlog.get_logger()
 
 
 # =============================================================================

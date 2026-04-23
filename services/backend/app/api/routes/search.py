@@ -13,6 +13,8 @@
 #   4. (optional) LLM synthesizes an answer from the top chunks
 # =============================================================================
 
+import time
+
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -24,6 +26,11 @@ from app.db.database import get_db
 from app.models.models import Source
 from app.services.vector_store import vector_store
 from app.services.llm import llm_service
+from app.services.metrics import (
+    rag_queries_total,
+    rag_query_duration_seconds,
+    rag_chunks_retrieved,
+)
 
 log = structlog.get_logger()
 
@@ -155,32 +162,43 @@ async def ask(
     RAG endpoint: search for relevant chunks, then generate an answer using the LLM.
     Returns the LLM answer plus the source chunks used.
     """
-    raw_results = vector_store.search(
-        query=body.query,
-        user_id=token.user_id,
-        top_k=body.top_k,
-        source_ids=body.source_ids,
-    )
+    start = time.monotonic()
+    try:
+        raw_results = vector_store.search(
+            query=body.query,
+            user_id=token.user_id,
+            top_k=body.top_k,
+            source_ids=body.source_ids,
+        )
 
-    filtered = [r for r in raw_results if r["score"] >= body.min_score]
-    results = await enrich_results(filtered, db)
+        filtered = [r for r in raw_results if r["score"] >= body.min_score]
+        results = await enrich_results(filtered, db)
 
-    # Generate answer from context
-    answer = llm_service.answer_with_context(
-        question=body.query,
-        context_chunks=[r.model_dump() for r in results],
-        system_prompt=body.system_prompt,
-    )
+        rag_chunks_retrieved.observe(len(results))
 
-    log.info(
-        "RAG answer generated",
-        query_preview=body.query[:50],
-        chunks_used=len(results),
-        answer_length=len(answer),
-    )
+        # Generate answer from context
+        answer = llm_service.answer_with_context(
+            question=body.query,
+            context_chunks=[r.model_dump() for r in results],
+            system_prompt=body.system_prompt,
+        )
 
-    return AskResponse(
-        query=body.query,
-        answer=answer,
-        sources=results,
-    )
+        rag_queries_total.labels(status="success").inc()
+
+        log.info(
+            "RAG answer generated",
+            query_preview=body.query[:50],
+            chunks_used=len(results),
+            answer_length=len(answer),
+        )
+
+        return AskResponse(
+            query=body.query,
+            answer=answer,
+            sources=results,
+        )
+    except Exception:
+        rag_queries_total.labels(status="error").inc()
+        raise
+    finally:
+        rag_query_duration_seconds.observe(time.monotonic() - start)

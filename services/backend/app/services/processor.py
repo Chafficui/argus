@@ -37,6 +37,7 @@ from app.models.models import Document, DocumentStatus
 from app.services.storage import storage_service
 from app.services.vector_store import vector_store
 from app.services.chunker import chunker
+from app.services.metrics import documents_indexed_total
 
 log = structlog.get_logger()
 
@@ -133,6 +134,8 @@ class DocumentProcessor:
             document.milvus_chunk_ids = ",".join(chunk_ids)
             document.status = DocumentStatus.EMBEDDED
             await db.flush()
+
+            documents_indexed_total.inc()
 
             log.info(
                 "Document processed successfully",

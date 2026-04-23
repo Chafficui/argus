@@ -30,6 +30,7 @@ from app.db.database import get_db
 from app.models.models import Source, User, SourceType, CrawlJob, CrawlStatus
 from app.core.config import get_settings
 from app.services.vector_store import vector_store
+from app.services.metrics import active_sources_gauge
 
 log = structlog.get_logger()
 
@@ -175,6 +176,7 @@ async def create_source(
     db.add(source)
     await db.flush()
 
+    active_sources_gauge.inc()
     log.info("Created source", source_id=source.id, url=source.url, user_id=user.id)
     return source
 
@@ -253,6 +255,7 @@ async def delete_source(
     await db.delete(
         source
     )  # cascade="all, delete-orphan" in the model handles related records
+    active_sources_gauge.dec()
     log.info("Deleted source", source_id=source_id, user_id=user.id)
 
 
