@@ -15,6 +15,21 @@
 
 services:
   # --------------------------------------------------------------------------
+  # Frontend — React app (Vite dev server)
+  # --------------------------------------------------------------------------
+  frontend:
+    build:
+      context: ./services/frontend
+    container_name: argus-frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+
+  # --------------------------------------------------------------------------
   # Backend — FastAPI application
   # --------------------------------------------------------------------------
   backend:
@@ -35,6 +50,7 @@ services:
       MINIO_ACCESS_KEY: argus-minio
       MINIO_SECRET_KEY: argus-minio-secret
       OLLAMA_BASE_URL: http://ollama:11434
+      KEYCLOAK_URL: http://keycloak:8080/realms/argus
       ENVIRONMENT: development
       DEV_AUTH_BYPASS: "true"
       LOG_LEVEL: info
@@ -207,6 +223,31 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+  # --------------------------------------------------------------------------
+  # Keycloak — OIDC identity provider
+  # Login: admin / admin | Test user: demo / demo
+  # --------------------------------------------------------------------------
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0
+    container_name: argus-keycloak
+    ports:
+      - "8081:8080"
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+    command:
+      - start-dev
+      - --import-realm
+      - --health-enabled=true
+    volumes:
+      - ./infra/keycloak/argus-realm.json:/opt/keycloak/data/import/argus-realm.json:ro
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/localhost/8080 && echo -e 'GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && cat <&3 | grep -q '200 OK'"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 30s
 
   # --------------------------------------------------------------------------
   # Prometheus — metrics collection and time-series storage
