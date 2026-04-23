@@ -132,7 +132,10 @@ async def list_sources(
     )
 
     result = await db.execute(
-        select(Source, func.coalesce(doc_count_sub.c.document_count, 0).label("document_count"))
+        select(
+            Source,
+            func.coalesce(doc_count_sub.c.document_count, 0).label("document_count"),
+        )
         .outerjoin(doc_count_sub, Source.id == doc_count_sub.c.source_id)
         .where(Source.user_id == user.id)
         .order_by(Source.created_at.desc())

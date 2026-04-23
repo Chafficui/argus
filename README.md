@@ -162,7 +162,7 @@ argus/
 │   ├── backend/                  # FastAPI backend (Python 3.12)
 │   ├── crawler/                  # Playwright crawler (Python 3.12)
 │   └── frontend/                 # React + TypeScript + Vite
-├── docker-compose.dev.yml        # Full local dev stack (13 services)
+├── docker-compose.dev.yml        # Full local dev stack (14 services)
 ├── CONTRIBUTING.md
 └── LICENSE
 ```
