@@ -46,12 +46,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Copy Python packages from builder
 COPY --from=builder /install /usr/local
 
-# Install Playwright browsers (Chromium only to keep image small)
-RUN playwright install chromium
-
 # Non-root user for security
 RUN useradd --create-home appuser
+
+# Install Playwright browsers as appuser so the cache lands in the right home dir
 USER appuser
+RUN playwright install chromium
 
 COPY . .
 
