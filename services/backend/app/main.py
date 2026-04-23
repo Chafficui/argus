@@ -20,11 +20,14 @@ import structlog
 import httpx
 from sqlalchemy import text
 
+from sqlalchemy import func, select as sa_select
+
 from app.core.config import get_settings
 from app.core.logging import configure_logging
 from app.db.database import init_db, AsyncSessionLocal
 from app.services.storage import storage_service
 from app.services.vector_store import vector_store
+from app.services.metrics import active_sources_gauge
 from app.api.routes import sources, search, ingest
 
 settings = get_settings()
@@ -51,6 +54,17 @@ async def lifespan(app: FastAPI):
 
     # Connect to Milvus and ensure collection exists
     vector_store.connect()
+
+    # Initialize active sources gauge from DB
+    async with AsyncSessionLocal() as session:
+        from app.models.models import Source
+
+        result = await session.execute(
+            sa_select(func.count()).select_from(Source)
+        )
+        count = result.scalar() or 0
+        active_sources_gauge.set(count)
+        log.info("Initialized active sources gauge", count=count)
 
     if settings.dev_auth_bypass and settings.environment == "development":
         log.warning(
