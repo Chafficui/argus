@@ -47,7 +47,11 @@ async def async_main():
         api_token=settings.api_token,
     )
     try:
-        await run_scheduler(client, interval_seconds=settings.crawl_interval_seconds)
+        await run_scheduler(
+            client,
+            interval_seconds=settings.crawl_interval_seconds,
+            poll_seconds=settings.poll_interval_seconds,
+        )
     finally:
         await client.close()
 
