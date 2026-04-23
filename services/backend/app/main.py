@@ -59,9 +59,7 @@ async def lifespan(app: FastAPI):
     async with AsyncSessionLocal() as session:
         from app.models.models import Source
 
-        result = await session.execute(
-            sa_select(func.count()).select_from(Source)
-        )
+        result = await session.execute(sa_select(func.count()).select_from(Source))
         count = result.scalar() or 0
         active_sources_gauge.set(count)
         log.info("Initialized active sources gauge", count=count)
