@@ -53,6 +53,26 @@ services:
       start_period: 30s
 
   # --------------------------------------------------------------------------
+  # Crawler — Playwright-based web scraper
+  # --------------------------------------------------------------------------
+  crawler:
+    build:
+      context: ./services/crawler
+    container_name: argus-crawler
+    environment:
+      BACKEND_URL: http://backend:8000
+      API_TOKEN: dev
+      SEARXNG_URL: http://searxng:8080
+      CRAWL_INTERVAL_SECONDS: 21600
+      POLL_INTERVAL_SECONDS: 60
+      LOG_LEVEL: info
+    depends_on:
+      backend:
+        condition: service_healthy
+      searxng:
+        condition: service_healthy
+
+  # --------------------------------------------------------------------------
   # PostgreSQL — relational database for users, sources, documents, crawl jobs
   # --------------------------------------------------------------------------
   postgres:
@@ -183,7 +203,7 @@ services:
     volumes:
       - ./searxng-settings.yml:/etc/searxng/settings.yml:ro
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8080/healthz || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/healthz || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
