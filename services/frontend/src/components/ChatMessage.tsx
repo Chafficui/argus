@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import Markdown from 'react-markdown'
 import { IconCopy, IconCheck, IconExternal } from './Icons'
 import { Eyebrow } from './Brand'
 
@@ -89,8 +90,8 @@ export default function ChatMessage({ role, text, sources, streaming }: ChatMess
         <img src="/argus-logo.png" width="18" height="18" alt="" />
       </div>
       <div className="flex-1 min-w-0">
-        <div style={{ fontSize: 14.5, lineHeight: 1.7, color: 'var(--fg-body)', whiteSpace: 'pre-wrap' }}>
-          {text}
+        <div className="chat-prose" style={{ fontSize: 14.5, lineHeight: 1.7, color: 'var(--fg-body)' }}>
+          <Markdown>{text}</Markdown>
           {streaming && (
             <span
               className="pulse-core"
