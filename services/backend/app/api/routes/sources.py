@@ -54,7 +54,7 @@ class SourceCreate(BaseModel):
     url: HttpUrl  # Pydantic validates this is a valid URL
     source_type: SourceType = SourceType.WEBSITE
     search_query: str | None = None
-    crawl_interval_hours: int = 6
+    crawl_interval_minutes: int = 360
 
 
 class SourceUpdate(BaseModel):
@@ -62,7 +62,7 @@ class SourceUpdate(BaseModel):
 
     name: str | None = None
     is_active: bool | None = None
-    crawl_interval_hours: int | None = None
+    crawl_interval_minutes: int | None = None
 
 
 class SourceResponse(BaseModel):
@@ -74,7 +74,7 @@ class SourceResponse(BaseModel):
     source_type: SourceType
     search_query: str | None = None
     is_active: bool
-    crawl_interval_hours: int
+    crawl_interval_minutes: int
     last_crawled_at: datetime | None
     created_at: datetime
     document_count: int = 0
@@ -189,7 +189,7 @@ async def create_source(
         url=str(body.url),
         source_type=body.source_type,
         search_query=body.search_query,
-        crawl_interval_hours=body.crawl_interval_hours,
+        crawl_interval_minutes=body.crawl_interval_minutes,
     )
     db.add(source)
     await db.flush()

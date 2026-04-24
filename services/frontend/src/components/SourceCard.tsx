@@ -23,6 +23,16 @@ interface Source {
   created_at: string
   last_crawled_at?: string | null
   document_count: number
+  crawl_interval_minutes: number
+}
+
+function formatInterval(minutes: number): string {
+  if (minutes < 60) return `${minutes}m`
+  if (minutes % 1440 === 0) return `${minutes / 1440}d`
+  if (minutes % 60 === 0) return `${minutes / 60}h`
+  const h = Math.floor(minutes / 60)
+  const m = minutes % 60
+  return `${h}h ${m}m`
 }
 
 function timeAgo(dateStr: string): string {
@@ -186,6 +196,9 @@ export default function SourceCard({
         <div className="flex items-center" style={{ gap: 12 }}>
           <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--fg-subtle)' }}>
             Added {timeAgo(source.created_at)}
+          </span>
+          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--fg-subtle)' }}>
+            every {formatInterval(source.crawl_interval_minutes)}
           </span>
           <button
             onClick={loadCrawlHistory}

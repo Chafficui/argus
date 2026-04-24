@@ -16,6 +16,7 @@ interface Source {
   created_at: string
   last_crawled_at?: string | null
   document_count: number
+  crawl_interval_minutes: number
 }
 
 function Stat({

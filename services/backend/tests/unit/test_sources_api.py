@@ -74,13 +74,13 @@ class TestCreateSource:
         assert response.status_code == 201
 
     @pytest.mark.unit
-    async def test_default_crawl_interval_is_6_hours(self, client, make_source):
+    async def test_default_crawl_interval_is_360_minutes(self, client, make_source):
         payload = make_source()
-        del payload["crawl_interval_hours"]  # Don't send this field
+        del payload["crawl_interval_minutes"]  # Don't send this field
         response = await client.post("/api/sources/", json=payload)
 
         assert response.status_code == 201
-        assert response.json()["crawl_interval_hours"] == 6
+        assert response.json()["crawl_interval_minutes"] == 360
 
     @pytest.mark.unit
     async def test_source_limit_is_enforced(self, client, make_source):
@@ -148,10 +148,10 @@ class TestUpdateSource:
 
     @pytest.mark.unit
     async def test_partial_update_preserves_other_fields(self, client, make_source):
-        """Updating name should not change crawl_interval_hours."""
+        """Updating name should not change crawl_interval_minutes."""
         created = (await client.post("/api/sources/", json=make_source({
             "name": "Original",
-            "crawl_interval_hours": 12,
+            "crawl_interval_minutes": 720,
         }))).json()
 
         response = await client.put(
@@ -160,7 +160,7 @@ class TestUpdateSource:
         )
         data = response.json()
         assert data["name"] == "New Name"
-        assert data["crawl_interval_hours"] == 12  # Unchanged
+        assert data["crawl_interval_minutes"] == 720  # Unchanged
 
 
 class TestDeleteSource:

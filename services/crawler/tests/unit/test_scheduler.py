@@ -13,7 +13,7 @@ class TestRunScheduler:
         """Scheduler should poll for sources, find due ones, and crawl them."""
         client = AsyncMock()
         client.get_active_sources = AsyncMock(return_value=[
-            {"id": "s1", "source_type": "rss", "url": "https://example.com/rss", "last_crawled_at": None, "crawl_interval_hours": 6},
+            {"id": "s1", "source_type": "rss", "url": "https://example.com/rss", "last_crawled_at": None, "crawl_interval_minutes": 360},
         ])
 
         crawled_ids = []
@@ -40,7 +40,7 @@ class TestRunScheduler:
         client = AsyncMock()
         client.get_active_sources = AsyncMock(return_value=[
             {"id": "s1", "source_type": "rss", "url": "https://example.com/rss",
-             "last_crawled_at": datetime.now(timezone.utc).isoformat(), "crawl_interval_hours": 6},
+             "last_crawled_at": datetime.now(timezone.utc).isoformat(), "crawl_interval_minutes": 360},
         ])
 
         crawled_ids = []

@@ -75,11 +75,27 @@ function Input({
   )
 }
 
+type IntervalUnit = 'min' | 'hr' | 'day'
+
+const unitPresets: Record<IntervalUnit, number[]> = {
+  min: [15, 30, 45],
+  hr: [1, 6, 12],
+  day: [1, 3, 7],
+}
+
+function toMinutes(value: number, unit: IntervalUnit): number {
+  if (unit === 'min') return value
+  if (unit === 'hr') return value * 60
+  return value * 1440
+}
+
 export default function AddSourceModal({ open, onClose, onCreated }: AddSourceModalProps) {
   const [sourceType, setSourceType] = useState('website')
   const [url, setUrl] = useState('')
   const [name, setName] = useState('')
   const [query, setQuery] = useState('')
+  const [intervalValue, setIntervalValue] = useState('6')
+  const [intervalUnit, setIntervalUnit] = useState<IntervalUnit>('hr')
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
@@ -95,12 +111,15 @@ export default function AddSourceModal({ open, onClose, onCreated }: AddSourceMo
         name: name || url || query,
         url: sourceType === 'serp' ? `https://search.argus.local/?q=${encodeURIComponent(query)}` : url,
         source_type: sourceType,
+        crawl_interval_minutes: toMinutes(parseInt(intervalValue) || 6, intervalUnit),
         ...(sourceType === 'serp' ? { search_query: query } : {}),
       })
       setName('')
       setUrl('')
       setSourceType('website')
       setQuery('')
+      setIntervalValue('6')
+      setIntervalUnit('hr')
       onCreated()
       onClose()
     } catch (err: unknown) {
@@ -262,6 +281,116 @@ export default function AddSourceModal({ open, onClose, onCreated }: AddSourceMo
 
             <Label>Name · optional</Label>
             <Input value={name} onChange={setName} placeholder="Human-readable label" />
+
+            <div style={{ marginTop: 12 }}>
+              <Label>Crawl interval</Label>
+
+              {/* Unit segmented toggle */}
+              <div
+                style={{
+                  display: 'inline-flex',
+                  background: 'var(--bg-surface-3)',
+                  border: '1px solid var(--line-default)',
+                  borderRadius: 'var(--radius-md)',
+                  padding: 2,
+                  marginBottom: 10,
+                }}
+              >
+                {(['min', 'hr', 'day'] as IntervalUnit[]).map((u) => (
+                  <button
+                    key={u}
+                    type="button"
+                    onClick={() => {
+                      setIntervalUnit(u)
+                      setIntervalValue(String(unitPresets[u][0]))
+                    }}
+                    style={{
+                      padding: '5px 14px',
+                      borderRadius: 'var(--radius-sm)',
+                      background: intervalUnit === u ? 'var(--signal-500-a20)' : 'transparent',
+                      border: 'none',
+                      color: intervalUnit === u ? 'var(--signal-300)' : 'var(--fg-muted)',
+                      fontFamily: 'var(--font-mono)',
+                      fontSize: 11,
+                      fontWeight: 600,
+                      letterSpacing: '0.06em',
+                      cursor: 'pointer',
+                      transition: 'all 150ms',
+                    }}
+                  >
+                    {u}
+                  </button>
+                ))}
+              </div>
+
+              {/* Presets + custom input row */}
+              <div className="flex items-center" style={{ gap: 6 }}>
+                {unitPresets[intervalUnit].map((p) => (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => setIntervalValue(String(p))}
+                    style={{
+                      padding: '6px 12px',
+                      borderRadius: 'var(--radius-md)',
+                      background:
+                        intervalValue === String(p)
+                          ? 'var(--signal-500-a20)'
+                          : 'var(--bg-surface-3)',
+                      border: `1px solid ${intervalValue === String(p) ? 'var(--signal-500-a30)' : 'var(--line-default)'}`,
+                      color:
+                        intervalValue === String(p) ? 'var(--signal-300)' : 'var(--fg-muted)',
+                      fontFamily: 'var(--font-mono)',
+                      fontSize: 12,
+                      cursor: 'pointer',
+                      transition: 'all 150ms',
+                    }}
+                  >
+                    {p}
+                  </button>
+                ))}
+                <div
+                  style={{
+                    marginLeft: 4,
+                    width: 1,
+                    height: 20,
+                    background: 'var(--line-default)',
+                    flexShrink: 0,
+                  }}
+                />
+                <input
+                  type="number"
+                  min="1"
+                  value={intervalValue}
+                  onChange={(e) => setIntervalValue(e.target.value)}
+                  style={{
+                    width: 52,
+                    padding: '6px 8px',
+                    background: 'var(--bg-surface-3)',
+                    border: '1px solid var(--line-default)',
+                    borderRadius: 'var(--radius-md)',
+                    color: 'var(--fg-bright)',
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: 12,
+                    outline: 'none',
+                    textAlign: 'center',
+                  }}
+                />
+                <span
+                  style={{
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: 11,
+                    color: 'var(--fg-subtle)',
+                  }}
+                >
+                  {intervalUnit === 'min'
+                    ? 'minutes'
+                    : intervalUnit === 'hr'
+                      ? 'hours'
+                      : 'days'}
+                </span>
+              </div>
+            </div>
           </div>
 
           {error && (

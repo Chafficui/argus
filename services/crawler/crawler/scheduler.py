@@ -4,7 +4,7 @@
 # Polls for sources that need crawling on a short interval.
 # A source is "due" if it has never been crawled (last_crawled_at is null)
 # or if enough time has passed since the last crawl (based on
-# crawl_interval_hours per source).
+# crawl_interval_minutes per source).
 # =============================================================================
 
 import asyncio
@@ -24,7 +24,7 @@ def _is_due(source: dict) -> bool:
     if not last:
         return True
     last_dt = datetime.fromisoformat(last)
-    interval = source.get("crawl_interval_hours", 6) * 3600
+    interval = source.get("crawl_interval_minutes", 360) * 60
     elapsed = (datetime.now(timezone.utc) - last_dt).total_seconds()
     return elapsed >= interval
 

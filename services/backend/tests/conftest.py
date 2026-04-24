@@ -209,7 +209,7 @@ def make_source():
             "name": fake.company() + " Blog",
             "url": fake.url(),
             "source_type": "website",
-            "crawl_interval_hours": 6,
+            "crawl_interval_minutes": 360,
         }
         if overrides:
             data.update(overrides)

@@ -120,9 +120,8 @@ class Source(Base):
     # For SERP sources: the search query to monitor
     search_query = Column(String, nullable=True)
 
-    # Crawl schedule — how often to check this source
-    # Stored as hours between crawls (e.g. 6 = every 6 hours)
-    crawl_interval_hours = Column(Integer, default=6)
+    # Crawl schedule — stored as minutes between crawls (e.g. 360 = every 6 hours)
+    crawl_interval_minutes = Column(Integer, default=360)
     last_crawled_at = Column(DateTime(timezone=True), nullable=True)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
