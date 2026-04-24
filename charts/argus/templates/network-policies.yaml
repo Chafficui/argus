@@ -255,6 +255,9 @@ spec:
         - podSelector:
             matchLabels:
               app: argus-crawler
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: milvus
       ports:
         - port: 9000
 
@@ -305,7 +308,7 @@ spec:
         - port: 5432
 
 ---
-# MILVUS: what it can talk to (etcd for metadata)
+# MILVUS: what it can talk to (etcd + minio)
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -324,6 +327,12 @@ spec:
               app.kubernetes.io/name: etcd
       ports:
         - port: 2379
+    - to:
+        - podSelector:
+            matchLabels:
+              app: argus-minio
+      ports:
+        - port: 9000
 
 ---
 # ETCD: who can talk to it (milvus + other etcd peers)
