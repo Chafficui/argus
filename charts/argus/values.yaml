@@ -210,6 +210,14 @@ milvus:
   cluster:
     enabled: false  # Single-node for dev. Set true for prod cluster mode.
 
+  # Disable Milvus's embedded MinIO/etcd/Pulsar — we use standalone mode
+  minio:
+    enabled: false
+  etcd:
+    enabled: false
+  pulsar:
+    enabled: false
+
   persistence:
     persistentVolumeClaim:
       storageClass: "local-path"
