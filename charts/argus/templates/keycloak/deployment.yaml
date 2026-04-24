@@ -72,17 +72,22 @@ spec:
               value: "true"
           resources:
             {{- toYaml .Values.keycloak.resources | nindent 12 }}
+          startupProbe:
+            httpGet:
+              path: {{ .Values.keycloak.httpRelativePath }}health/live
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 30
           livenessProbe:
             httpGet:
               path: {{ .Values.keycloak.httpRelativePath }}health/live
               port: 8080
-            initialDelaySeconds: 60
             periodSeconds: 15
-            failureThreshold: 5
+            failureThreshold: 3
           readinessProbe:
             httpGet:
               path: {{ .Values.keycloak.httpRelativePath }}health/ready
               port: 8080
-            initialDelaySeconds: 30
             periodSeconds: 10
 {{- end }}
