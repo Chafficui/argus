@@ -221,6 +221,18 @@ milvus:
   pulsar:
     enabled: false
 
+  externalS3:
+    enabled: true
+    host: argus-minio
+    port: "9000"
+    accessKey: "argus-minio"
+    secretKey: "argus-minio-secret"
+    useSSL: false
+    bucketName: "milvus-bucket"
+    rootPath: "file"
+    useIAM: false
+    cloudProvider: "aws"
+
   persistence:
     persistentVolumeClaim:
       storageClass: "local-path"

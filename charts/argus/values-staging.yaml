@@ -97,6 +97,17 @@ milvus:
     replicaCount: 1
   pulsar:
     enabled: false
+  externalS3:
+    enabled: true
+    host: argus-minio
+    port: "9000"
+    accessKey: "argus-minio"
+    secretKey: "argus-minio-secret"
+    useSSL: false
+    bucketName: "milvus-bucket"
+    rootPath: "file"
+    useIAM: false
+    cloudProvider: "aws"
   resources:
     requests:
       cpu: "200m"
