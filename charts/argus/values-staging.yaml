@@ -6,13 +6,13 @@
 # =============================================================================
 
 global:
-  imageRegistry: "ghcr.io/chafficui/argus/"
+  imageRegistry: ""
   imagePullPolicy: Always
 
 # -- Backend ------------------------------------------------------------------
 backend:
   image:
-    repository: backend
+    repository: ghcr.io/chafficui/argus/backend
     tag: latest
   resources:
     requests:
@@ -35,7 +35,7 @@ backend:
 # -- Crawler ------------------------------------------------------------------
 crawler:
   image:
-    repository: crawler
+    repository: ghcr.io/chafficui/argus/crawler
     tag: latest
   resources:
     requests:
@@ -48,7 +48,7 @@ crawler:
 # -- Frontend -----------------------------------------------------------------
 frontend:
   image:
-    repository: frontend
+    repository: ghcr.io/chafficui/argus/frontend
     tag: latest
   resources:
     requests:
