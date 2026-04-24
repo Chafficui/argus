@@ -20,6 +20,8 @@ services:
   frontend:
     build:
       context: ./services/frontend
+      args:
+        BUILD_ENV: docker
     container_name: argus-frontend
     ports:
       - "5173:80"

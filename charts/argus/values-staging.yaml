@@ -1,0 +1,133 @@
+# =============================================================================
+# values-staging.yaml — Overrides for VPS staging (8 GB RAM / k3s)
+# =============================================================================
+# Real secrets are injected via --set at deploy time (from GitHub Secrets).
+# This file only contains non-sensitive overrides.
+# =============================================================================
+
+global:
+  imageRegistry: "ghcr.io/chafficui/argus/"
+  imagePullPolicy: Always
+
+# -- Backend ------------------------------------------------------------------
+backend:
+  image:
+    repository: backend
+    tag: latest
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "256Mi"
+    limits:
+      cpu: "500m"
+      memory: "512Mi"
+  env:
+    LOG_LEVEL: "info"
+    MILVUS_HOST: "argus-milvus"
+    MILVUS_PORT: "19530"
+    POSTGRES_HOST: "argus-postgresql"
+    POSTGRES_PORT: "5432"
+    POSTGRES_DB: "argus"
+    MINIO_ENDPOINT: "argus-minio:9000"
+    KEYCLOAK_URL: "http://argus-keycloak:80/auth/realms/argus"
+    OLLAMA_BASE_URL: "http://argus-ollama:11434"
+
+# -- Crawler ------------------------------------------------------------------
+crawler:
+  image:
+    repository: crawler
+    tag: latest
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "512Mi"
+    limits:
+      cpu: "1000m"
+      memory: "1Gi"
+
+# -- Frontend -----------------------------------------------------------------
+frontend:
+  image:
+    repository: frontend
+    tag: latest
+  resources:
+    requests:
+      cpu: "50m"
+      memory: "64Mi"
+    limits:
+      cpu: "100m"
+      memory: "128Mi"
+
+# -- Ollama -------------------------------------------------------------------
+ollama:
+  resources:
+    requests:
+      cpu: "500m"
+      memory: "2Gi"
+    limits:
+      cpu: "2000m"
+      memory: "4Gi"
+  persistence:
+    size: "10Gi"
+
+# -- Keycloak -----------------------------------------------------------------
+keycloak:
+  httpRelativePath: "/auth/"
+  auth:
+    adminUser: admin
+    adminPassword: "CHANGE_ME_VIA_SECRET"
+  resources:
+    requests:
+      cpu: "200m"
+      memory: "512Mi"
+    limits:
+      cpu: "500m"
+      memory: "1Gi"
+
+# -- Milvus -------------------------------------------------------------------
+milvus:
+  resources:
+    requests:
+      cpu: "200m"
+      memory: "1Gi"
+    limits:
+      cpu: "1000m"
+      memory: "2Gi"
+
+# -- PostgreSQL ---------------------------------------------------------------
+postgresql:
+  primary:
+    resources:
+      requests:
+        cpu: "100m"
+        memory: "128Mi"
+      limits:
+        cpu: "500m"
+        memory: "512Mi"
+
+# -- MinIO --------------------------------------------------------------------
+minio:
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "256Mi"
+    limits:
+      cpu: "500m"
+      memory: "512Mi"
+  persistence:
+    size: "10Gi"
+
+# -- Observability — disabled to save RAM on staging --------------------------
+observability:
+  enabled: false
+
+# -- Ingress ------------------------------------------------------------------
+ingress:
+  enabled: true
+  className: "traefik"
+  host: "argus.codai.app"
+  tls:
+    enabled: true
+    secretName: argus-tls
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod

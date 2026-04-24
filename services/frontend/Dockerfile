@@ -3,7 +3,8 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci
 COPY . .
-COPY .env.docker .env
+ARG BUILD_ENV=production
+COPY .env.${BUILD_ENV} .env
 RUN npm run build
 
 FROM nginx:alpine AS runtime

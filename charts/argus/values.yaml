@@ -170,6 +170,9 @@ ollama:
 keycloak:
   enabled: true
 
+  # Serve Keycloak under /auth so ingress can route by path prefix
+  httpRelativePath: "/auth/"
+
   # These values are passed to the official Bitnami Keycloak Helm chart
   auth:
     adminUser: admin
@@ -356,20 +359,8 @@ ingress:
 
   host: "argus.local"  # For local dev, add this to /etc/hosts
 
-  # URL routing rules:
-  routes:
-    - path: /
-      service: argus-frontend
-      port: 80
-    - path: /api
-      service: argus-backend
-      port: 8000
-    - path: /auth
-      service: argus-keycloak
-      port: 80
-    - path: /grafana
-      service: argus-grafana
-      port: 3000
+  # Extra annotations merged into the Ingress metadata (e.g. cert-manager)
+  annotations: {}
 
 # ----------------------------------------------------------------------------
 # NETWORK POLICIES — "On-Premise / Security" from the job posting
