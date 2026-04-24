@@ -93,7 +93,8 @@ milvus:
     tls:
       enabled: false
   etcd:
-    enabled: false
+    enabled: true
+    replicaCount: 1
   pulsar:
     enabled: false
   resources:

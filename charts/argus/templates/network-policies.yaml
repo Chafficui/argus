@@ -75,7 +75,7 @@ spec:
     - to:
         - podSelector:
             matchLabels:
-              app: argus-milvus
+              app.kubernetes.io/name: milvus
       ports:
         - port: 19530
     # MinIO
@@ -303,5 +303,51 @@ spec:
               app: argus-postgresql
       ports:
         - port: 5432
+
+---
+# MILVUS: what it can talk to (etcd for metadata)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: milvus-egress
+  namespace: {{ .Values.global.namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: milvus
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: etcd
+      ports:
+        - port: 2379
+
+---
+# ETCD: who can talk to it (milvus + other etcd peers)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: etcd-ingress
+  namespace: {{ .Values.global.namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: etcd
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: milvus
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: etcd
+      ports:
+        - port: 2379
+        - port: 2380
 
 {{- end }}
