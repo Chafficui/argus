@@ -306,14 +306,15 @@ jobs:
 
       - name: Deploy with Helm
         run: |
+          SHORT_SHA=${GITHUB_SHA::7}
           helm dependency update ./charts/argus
           helm upgrade --install argus ./charts/argus \
             --namespace argus \
             --create-namespace \
             -f charts/argus/values-staging.yaml \
-            --set backend.image.tag=sha-${{ github.sha }} \
-            --set frontend.image.tag=sha-${{ github.sha }} \
-            --set crawler.image.tag=sha-${{ github.sha }} \
+            --set backend.image.tag=sha-${SHORT_SHA} \
+            --set frontend.image.tag=sha-${SHORT_SHA} \
+            --set crawler.image.tag=sha-${SHORT_SHA} \
             --set keycloak.auth.adminPassword=${{ secrets.KEYCLOAK_ADMIN_PASSWORD }} \
             --atomic \
             --timeout 10m

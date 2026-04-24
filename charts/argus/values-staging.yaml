@@ -74,6 +74,8 @@ ollama:
 
 # -- Keycloak -----------------------------------------------------------------
 keycloak:
+  image:
+    tag: "24"
   httpRelativePath: "/auth/"
   auth:
     adminUser: admin
@@ -106,6 +108,8 @@ milvus:
 
 # -- PostgreSQL ---------------------------------------------------------------
 postgresql:
+  image:
+    tag: "16"
   primary:
     resources:
       requests:
@@ -117,6 +121,8 @@ postgresql:
 
 # -- MinIO --------------------------------------------------------------------
 minio:
+  image:
+    tag: "2024"
   resources:
     requests:
       cpu: "100m"
