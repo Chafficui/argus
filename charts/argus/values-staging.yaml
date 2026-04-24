@@ -88,6 +88,8 @@ keycloak:
 milvus:
   minio:
     enabled: false
+    tls:
+      enabled: false
   etcd:
     enabled: false
   pulsar:

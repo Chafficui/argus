@@ -210,9 +210,11 @@ milvus:
   cluster:
     enabled: false  # Single-node for dev. Set true for prod cluster mode.
 
-  # Disable Milvus's embedded MinIO/etcd/Pulsar — we use standalone mode
+  # Disable Milvus's embedded subcharts — standalone mode uses local storage
   minio:
     enabled: false
+    tls:
+      enabled: false
   etcd:
     enabled: false
   pulsar:
