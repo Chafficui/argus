@@ -152,11 +152,34 @@ spec:
               app: prometheus
       ports:
         - port: 8000
-    # Ingress controller (nginx) routes external traffic to backend
+    # Ingress controller routes external traffic to backend
     - from:
         - namespaceSelector:
             matchLabels:
-              kubernetes.io/metadata.name: ingress-nginx
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - port: 8000
+
+---
+# ACME HTTP-01 solver: cert-manager uses this for TLS certificate challenges
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: acme-solver-ingress
+  namespace: {{ .Values.global.namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      acme.cert-manager.io/http01-solver: "true"
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - port: 8089
 
 ---
 # CRAWLER: what it can talk to
@@ -227,12 +250,6 @@ spec:
   policyTypes:
     - Ingress
   ingress:
-    - from:
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: ingress-nginx
-      ports:
-        - port: 80
     - from:
         - namespaceSelector:
             matchLabels:
