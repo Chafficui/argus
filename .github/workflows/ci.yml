@@ -238,7 +238,7 @@ jobs:
 
     strategy:
       matrix:
-        service: [backend, frontend]
+        service: [backend, frontend, crawler]
 
     steps:
       - uses: actions/checkout@v4
@@ -288,7 +288,7 @@ jobs:
         working-directory: .
     environment:
       name: staging
-      url: https://argus-staging.your-domain.com
+      url: https://argus.codai.app
 
     steps:
       - uses: actions/checkout@v4
@@ -305,14 +305,17 @@ jobs:
 
       - name: Deploy with Helm
         run: |
+          helm dependency update ./charts/argus
           helm upgrade --install argus ./charts/argus \
             --namespace argus \
             --create-namespace \
+            -f charts/argus/values-staging.yaml \
             --set backend.image.tag=sha-${{ github.sha }} \
             --set frontend.image.tag=sha-${{ github.sha }} \
-            --set global.imageRegistry=ghcr.io/${{ github.repository_owner }}/argus/ \
+            --set crawler.image.tag=sha-${{ github.sha }} \
+            --set keycloak.auth.adminPassword=${{ secrets.KEYCLOAK_ADMIN_PASSWORD }} \
             --atomic \
-            --timeout 5m
+            --timeout 10m
 
   # ---------------------------------------------------------------------------
   # DEPLOY TO PRODUCTION
@@ -330,7 +333,7 @@ jobs:
         working-directory: .
     environment:
       name: production
-      url: https://argus.your-domain.com
+      url: https://argus.codai.app
 
     steps:
       - uses: actions/checkout@v4
