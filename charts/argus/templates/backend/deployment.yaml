@@ -45,8 +45,10 @@ spec:
         prometheus.io/port: "8000"
         prometheus.io/path: "/metrics"
     spec:
-      # initContainers run BEFORE the main container starts.
-      # Here we wait until PostgreSQL is ready — otherwise the backend would crash on startup.
+      {{- if .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml .Values.global.imagePullSecrets | nindent 8 }}
+      {{- end }}
       initContainers:
         - name: wait-for-postgres
           image: busybox:1.36

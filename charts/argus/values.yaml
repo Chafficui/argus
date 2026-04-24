@@ -24,6 +24,10 @@ global:
   # - IfNotPresent: use local cache if available (good for dev)
   imagePullPolicy: IfNotPresent
 
+  # Credentials for pulling images from private registries (e.g. GHCR)
+  # Create the secret with: kubectl create secret docker-registry ghcr-secret ...
+  imagePullSecrets: []
+
   # Storage class for persistent volumes (disk storage for databases etc.)
   # "local-path" is the default for k3s. On a real cluster this might be "gp3" (AWS) or "standard" (GKE)
   storageClass: "local-path"

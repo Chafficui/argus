@@ -8,6 +8,8 @@
 global:
   imageRegistry: ""
   imagePullPolicy: Always
+  imagePullSecrets:
+    - name: ghcr-secret
 
 # -- Backend ------------------------------------------------------------------
 backend:

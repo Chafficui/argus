@@ -18,6 +18,10 @@ spec:
         app: argus-crawler
         app.kubernetes.io/name: argus-crawler
     spec:
+      {{- if .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml .Values.global.imagePullSecrets | nindent 8 }}
+      {{- end }}
       initContainers:
         - name: wait-for-backend
           image: busybox:1.36
