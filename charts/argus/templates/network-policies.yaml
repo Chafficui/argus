@@ -89,7 +89,7 @@ spec:
     - to:
         - podSelector:
             matchLabels:
-              app.kubernetes.io/name: keycloak
+              app: argus-keycloak
       ports:
         - port: 8080
     # Ollama (local LLM)
@@ -209,5 +209,99 @@ spec:
     # Can reach all pods in the namespace for metric scraping
     - to:
         - podSelector: {}
+
+---
+# POSTGRESQL: who can talk to it
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: postgresql-ingress
+  namespace: {{ .Values.global.namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      app: argus-postgresql
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: argus-backend
+        - podSelector:
+            matchLabels:
+              app: argus-keycloak
+      ports:
+        - port: 5432
+
+---
+# MINIO: who can talk to it
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: minio-ingress
+  namespace: {{ .Values.global.namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      app: argus-minio
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: argus-backend
+        - podSelector:
+            matchLabels:
+              app: argus-crawler
+      ports:
+        - port: 9000
+
+---
+# KEYCLOAK: who can talk to it
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: keycloak-ingress
+  namespace: {{ .Values.global.namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      app: argus-keycloak
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: argus-backend
+      ports:
+        - port: 8080
+    - from:
+        - namespaceSelector: {}
+      ports:
+        - port: 8080
+
+---
+# KEYCLOAK: what it can talk to
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: keycloak-egress
+  namespace: {{ .Values.global.namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      app: argus-keycloak
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app: argus-postgresql
+      ports:
+        - port: 5432
 
 {{- end }}

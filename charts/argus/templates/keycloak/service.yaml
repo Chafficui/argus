@@ -1,0 +1,18 @@
+{{- if .Values.keycloak.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: argus-keycloak
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app.kubernetes.io/name: argus-keycloak
+    app.kubernetes.io/part-of: argus
+spec:
+  selector:
+    app: argus-keycloak
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
+  type: ClusterIP
+{{- end }}

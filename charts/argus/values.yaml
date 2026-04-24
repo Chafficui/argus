@@ -169,30 +169,27 @@ ollama:
 # ----------------------------------------------------------------------------
 # KEYCLOAK — Identity & Access Management (IAM)
 # Handles login, user management, OAuth2/OIDC tokens
-# This is what enterprises use instead of rolling their own auth.
+# Uses official Keycloak image from quay.io.
 # ----------------------------------------------------------------------------
 keycloak:
   enabled: true
 
-  # Serve Keycloak under /auth so ingress can route by path prefix
+  image:
+    repository: quay.io/keycloak/keycloak
+    tag: "26.3"
+
   httpRelativePath: "/auth/"
 
-  # These values are passed to the official Bitnami Keycloak Helm chart
   auth:
     adminUser: admin
-    # In prod: use a Kubernetes Secret, not a plain value here
     adminPassword: "changeme-in-prod"
-
-  postgresql:
-    enabled: false  # We use our shared PostgreSQL instance instead
 
   externalDatabase:
     host: argus-postgresql
     port: 5432
     database: keycloak
     user: keycloak
-    existingSecret: argus-keycloak-db-secret
-    existingSecretPasswordKey: password
+    password: ""
 
   resources:
     requests:
@@ -212,9 +209,8 @@ milvus:
   enabled: true
 
   cluster:
-    enabled: false  # Single-node for dev. Set true for prod cluster mode.
+    enabled: false
 
-  # Disable Milvus's embedded subcharts — standalone mode uses local storage
   minio:
     enabled: false
     tls:
@@ -239,53 +235,51 @@ milvus:
 
 # ----------------------------------------------------------------------------
 # POSTGRESQL — Relational Database
-# Stores structured data: users, monitored sources, crawl job history, metadata.
+# Uses official postgres image from Docker Hub.
+# Also hosts the Keycloak database (created via init script).
 # ----------------------------------------------------------------------------
 postgresql:
   enabled: true
 
+  image:
+    repository: postgres
+    tag: "16-alpine"
+
   auth:
     database: argus
     username: argus
-    existingSecret: argus-postgres-secret
-    secretKeys:
-      adminPasswordKey: postgres-password
-      userPasswordKey: password
+    password: ""
+    postgresPassword: ""
 
-  primary:
-    persistence:
-      enabled: true
-      size: "10Gi"
-      storageClass: "local-path"
+  persistence:
+    size: "10Gi"
 
-    resources:
-      requests:
-        cpu: "250m"
-        memory: "256Mi"
-      limits:
-        cpu: "1000m"
-        memory: "1Gi"
+  resources:
+    requests:
+      cpu: "250m"
+      memory: "256Mi"
+    limits:
+      cpu: "1000m"
+      memory: "1Gi"
 
 # ----------------------------------------------------------------------------
 # MINIO — Object Storage (like S3, but self-hosted)
-# Stores raw crawled documents, PDFs, HTML snapshots before they're processed.
-# This is the "Objektspeicher" mentioned in the job posting.
+# Uses official MinIO image from Docker Hub.
+# Buckets are auto-created by the backend on startup.
 # ----------------------------------------------------------------------------
 minio:
   enabled: true
 
-  auth:
-    existingSecret: argus-minio-secret
-    secretKeys:
-      rootUserKey: root-user
-      rootPasswordKey: root-password
+  image:
+    repository: minio/minio
+    tag: "latest"
 
-  defaultBuckets: "argus-raw-docs,argus-processed"
+  auth:
+    rootUser: ""
+    rootPassword: ""
 
   persistence:
-    enabled: true
     size: "20Gi"
-    storageClass: "local-path"
 
   resources:
     requests:

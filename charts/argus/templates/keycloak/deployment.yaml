@@ -1,0 +1,88 @@
+{{- if .Values.keycloak.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: argus-keycloak
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: argus-keycloak
+    app.kubernetes.io/name: argus-keycloak
+    app.kubernetes.io/part-of: argus
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: argus-keycloak
+  template:
+    metadata:
+      labels:
+        app: argus-keycloak
+        app.kubernetes.io/name: argus-keycloak
+    spec:
+      {{- if .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml .Values.global.imagePullSecrets | nindent 8 }}
+      {{- end }}
+      initContainers:
+        - name: wait-for-postgres
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              echo "Waiting for PostgreSQL..."
+              until nc -z argus-postgresql 5432; do
+                sleep 2
+              done
+              echo "PostgreSQL is ready!"
+      containers:
+        - name: keycloak
+          image: {{ .Values.keycloak.image.repository }}:{{ .Values.keycloak.image.tag }}
+          imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+          args:
+            - start
+          ports:
+            - containerPort: 8080
+              name: http
+          env:
+            - name: KC_DB
+              value: "postgres"
+            - name: KC_DB_URL
+              value: "jdbc:postgresql://{{ .Values.keycloak.externalDatabase.host }}:{{ .Values.keycloak.externalDatabase.port }}/{{ .Values.keycloak.externalDatabase.database }}"
+            - name: KC_DB_USERNAME
+              value: {{ .Values.keycloak.externalDatabase.user | quote }}
+            - name: KC_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: argus-keycloak-db-secret
+                  key: password
+            - name: KC_BOOTSTRAP_ADMIN_USERNAME
+              value: {{ .Values.keycloak.auth.adminUser | quote }}
+            - name: KC_BOOTSTRAP_ADMIN_PASSWORD
+              value: {{ .Values.keycloak.auth.adminPassword | quote }}
+            - name: KC_HTTP_RELATIVE_PATH
+              value: {{ .Values.keycloak.httpRelativePath | quote }}
+            - name: KC_HOSTNAME_STRICT
+              value: "false"
+            - name: KC_HTTP_ENABLED
+              value: "true"
+            - name: KC_PROXY_HEADERS
+              value: "xforwarded"
+            - name: KC_HEALTH_ENABLED
+              value: "true"
+          resources:
+            {{- toYaml .Values.keycloak.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.keycloak.httpRelativePath }}health/live
+              port: 8080
+            initialDelaySeconds: 60
+            periodSeconds: 15
+            failureThreshold: 5
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.keycloak.httpRelativePath }}health/ready
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+{{- end }}
