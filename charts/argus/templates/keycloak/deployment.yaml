@@ -76,9 +76,9 @@ spec:
             httpGet:
               path: {{ .Values.keycloak.httpRelativePath }}health/live
               port: 8080
-            initialDelaySeconds: 30
+            initialDelaySeconds: 60
             periodSeconds: 10
-            failureThreshold: 30
+            failureThreshold: 54
           livenessProbe:
             httpGet:
               path: {{ .Values.keycloak.httpRelativePath }}health/live
