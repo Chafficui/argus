@@ -21,6 +21,7 @@
 # =============================================================================
 
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
+from sqlalchemy import text
 from app.core.config import get_settings
 from app.models.models import Base
 import structlog
@@ -85,4 +86,8 @@ async def init_db():
     log.info("Initializing database tables...")
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        # create_all won't add columns to existing tables — patch them here
+        await conn.execute(text(
+            "ALTER TABLE sources ADD COLUMN IF NOT EXISTS crawl_interval_minutes INTEGER DEFAULT 360"
+        ))
     log.info("Database tables ready")

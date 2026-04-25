@@ -160,6 +160,13 @@ async def create_source(
 ):
     """Create a new monitored source."""
     settings = get_settings()
+
+    if token.username == "demo" and settings.environment == "staging":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Demo account cannot create sources on staging",
+        )
+
     user = await get_or_create_user(token, db)
 
     # Check user hasn't exceeded their source limit
@@ -227,6 +234,12 @@ async def update_source(
     token: TokenData = Depends(verify_token),
 ):
     """Update a source."""
+    settings = get_settings()
+    if token.username == "demo" and settings.environment == "staging":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Demo account cannot modify sources on staging",
+        )
     user = await get_or_create_user(token, db)
 
     result = await db.execute(
@@ -257,6 +270,12 @@ async def delete_source(
     token: TokenData = Depends(verify_token),
 ):
     """Delete a source and all its documents."""
+    settings = get_settings()
+    if token.username == "demo" and settings.environment == "staging":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Demo account cannot delete sources on staging",
+        )
     user = await get_or_create_user(token, db)
 
     result = await db.execute(
