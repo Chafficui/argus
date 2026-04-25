@@ -4,7 +4,7 @@ COPY package*.json ./
 RUN npm ci
 COPY . .
 ARG BUILD_ENV=production
-COPY .env.${BUILD_ENV} .env
+COPY .env.${BUILD_ENV} .env.production
 RUN npm run build
 
 FROM nginx:alpine AS runtime

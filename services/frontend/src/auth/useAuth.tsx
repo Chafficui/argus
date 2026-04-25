@@ -4,15 +4,21 @@ import keycloak from './keycloak'
 
 interface AuthContextType {
   authenticated: boolean
+  initialized: boolean
   token: string | undefined
   user: { name: string; email: string } | null
+  roles: string[]
+  login: () => void
   logout: () => void
 }
 
 const AuthContext = createContext<AuthContextType>({
   authenticated: false,
+  initialized: false,
   token: undefined,
   user: null,
+  roles: [],
+  login: () => {},
   logout: () => {},
 })
 
@@ -22,7 +28,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     keycloak
-      .init({ onLoad: 'login-required', checkLoginIframe: false })
+      .init({
+        onLoad: 'check-sso',
+        silentCheckSsoRedirectUri: window.location.origin + '/silent-check-sso.html',
+        checkLoginIframe: false,
+        messageReceiveTimeout: 1000,
+      })
       .then((auth) => {
         setAuthenticated(auth)
         setInitialized(true)
@@ -31,13 +42,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.error('Keycloak init failed', err)
         setInitialized(true)
       })
+  }, [])
 
-    // Token refresh interval
+  useEffect(() => {
+    if (!authenticated) return
     const interval = setInterval(() => {
       keycloak.updateToken(30).catch(() => keycloak.login())
     }, 10000)
-
     return () => clearInterval(interval)
+  }, [authenticated])
+
+  const login = useCallback(() => {
+    keycloak.login()
   }, [])
 
   const logout = useCallback(() => {
@@ -51,33 +67,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     : null
 
-  if (!initialized) {
-    return (
-      <div
-        className="flex items-center justify-center h-screen"
-        style={{ background: 'var(--bg-void)', color: 'var(--fg-muted)' }}
-      >
-        <div className="text-center">
-          <div
-            className="pulse-core mx-auto"
-            style={{
-              width: 10,
-              height: 10,
-              borderRadius: '50%',
-              background: 'var(--core-500)',
-              marginBottom: 16,
-            }}
-          />
-          <div style={{ fontFamily: 'var(--font-display)', fontSize: 11, fontWeight: 600, letterSpacing: '0.18em', textTransform: 'uppercase' }}>
-            Connecting...
-          </div>
-        </div>
-      </div>
-    )
-  }
+  const roles: string[] = keycloak.tokenParsed?.realm_access?.roles || []
 
   return (
-    <AuthContext.Provider value={{ authenticated, token: keycloak.token, user, logout }}>
+    <AuthContext.Provider value={{ authenticated, initialized, token: keycloak.token, user, roles, login, logout }}>
       {children}
     </AuthContext.Provider>
   )

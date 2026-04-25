@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
 import { Brand } from './Brand'
@@ -7,7 +7,7 @@ import api from '../api/client'
 
 const navItems = [
   { to: '/search', label: 'Search', Icon: IconSearch },
-  { to: '/', label: 'Sources', Icon: IconSources, showCount: true },
+  { to: '/sources', label: 'Sources', Icon: IconSources, showCount: true },
   { to: '/chat', label: 'Chat', Icon: IconChat },
 ]
 
@@ -16,12 +16,18 @@ export default function Layout() {
   const [sourceCount, setSourceCount] = useState<number | null>(null)
   const [liveCrawls, setLiveCrawls] = useState(0)
 
-  useEffect(() => {
+  const fetchCounts = useCallback(() => {
     api.get('/api/sources/').then((res) => {
       setSourceCount(res.data.length)
       setLiveCrawls(res.data.filter((s: { is_active: boolean }) => s.is_active).length)
     }).catch(() => {})
   }, [])
+
+  useEffect(() => {
+    fetchCounts()
+    const interval = setInterval(fetchCounts, 10_000)
+    return () => clearInterval(interval)
+  }, [fetchCounts])
 
   return (
     <div className="flex h-screen" style={{ background: 'var(--bg-void)', color: 'var(--fg-body)' }}>
@@ -65,7 +71,7 @@ export default function Layout() {
             <NavLink
               key={item.to}
               to={item.to}
-              end={item.to === '/'}
+              end
               className="group"
             >
               {({ isActive }) => (
@@ -160,23 +166,41 @@ export default function Layout() {
         </div>
 
         {/* Settings */}
-        <div
-          className="flex items-center"
-          style={{
-            gap: 12,
-            padding: '10px 14px',
-            borderRadius: 'var(--radius-md)',
-            fontFamily: 'var(--font-sans)',
-            fontSize: 13,
-            fontWeight: 500,
-            color: 'var(--fg-muted)',
-            cursor: 'pointer',
-            transition: 'all 150ms',
-          }}
-        >
-          <IconSettings size={16} />
-          <span>Settings</span>
-        </div>
+        <NavLink to="/settings" end className="group">
+          {({ isActive }) => (
+            <div
+              className="relative flex items-center"
+              style={{
+                gap: 12,
+                padding: '10px 14px',
+                borderRadius: 'var(--radius-md)',
+                fontFamily: 'var(--font-sans)',
+                fontSize: 13,
+                fontWeight: 500,
+                cursor: 'pointer',
+                transition: 'all 150ms cubic-bezier(0.2, 0.8, 0.2, 1)',
+                background: isActive ? 'var(--signal-500-a10)' : 'transparent',
+                color: isActive ? 'var(--signal-300)' : 'var(--fg-muted)',
+              }}
+            >
+              {isActive && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    left: 0,
+                    top: 8,
+                    bottom: 8,
+                    width: 2,
+                    background: 'var(--signal-500)',
+                    borderRadius: 1,
+                  }}
+                />
+              )}
+              <IconSettings size={16} />
+              <span>Settings</span>
+            </div>
+          )}
+        </NavLink>
 
         {/* User */}
         <div style={{ padding: '12px 8px 0', borderTop: '1px solid var(--line-hairline)', marginTop: 8 }}>
