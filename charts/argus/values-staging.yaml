@@ -138,9 +138,9 @@ minio:
   persistence:
     size: "10Gi"
 
-# -- Observability ------------------------------------------------------------
+# -- Observability — disabled on staging (needs Prometheus CRDs installed) ----
 observability:
-  enabled: true
+  enabled: false
 
 # -- Ingress ------------------------------------------------------------------
 ingress:
