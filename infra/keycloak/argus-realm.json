@@ -126,21 +126,20 @@
       "lastName": "User",
       "enabled": true,
       "emailVerified": true,
-      "requiredActions": ["UPDATE_PASSWORD"],
       "credentials": [
         {
           "type": "password",
           "value": "changeme",
-          "temporary": false
+          "temporary": true
         }
       ],
-      "realmRoles": ["user", "admin"]
+      "realmRoles": ["user"]
     },
     {
       "username": "service-account-crawler-service",
       "enabled": true,
       "serviceAccountClientId": "crawler-service",
-      "realmRoles": ["crawler"]
+      "realmRoles": ["user"]
     }
   ]
 }
