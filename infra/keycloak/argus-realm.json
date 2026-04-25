@@ -126,11 +126,12 @@
       "lastName": "User",
       "enabled": true,
       "emailVerified": true,
+      "requiredActions": ["UPDATE_PASSWORD"],
       "credentials": [
         {
           "type": "password",
           "value": "changeme",
-          "temporary": true
+          "temporary": false
         }
       ],
       "realmRoles": ["user", "admin"]
