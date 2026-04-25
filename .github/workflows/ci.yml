@@ -12,7 +12,6 @@
 #   lint             → Backend code quality (ruff)
 #   build            → Build & push Docker images (main branch only)
 #   deploy-staging   → Helm upgrade on K8s staging (requires DEPLOY_ENABLED)
-#   deploy-prod      → Helm upgrade on K8s production (requires DEPLOY_ENABLED)
 # =============================================================================
 
 name: Argus CI/CD
@@ -319,42 +318,3 @@ jobs:
             --atomic \
             --timeout 10m
 
-  # ---------------------------------------------------------------------------
-  # DEPLOY TO PRODUCTION
-  # Requires: DEPLOY_ENABLED variable set to 'true' in GitHub repo settings,
-  # and KUBE_CONFIG_PROD secret with base64-encoded kubeconfig.
-  # Configure "Required reviewers" in GitHub Environment Settings for manual approval.
-  # ---------------------------------------------------------------------------
-  deploy-production:
-    name: Deploy to Production
-    runs-on: ubuntu-latest
-    needs: [deploy-staging]
-    if: vars.DEPLOY_ENABLED == 'true'
-    defaults:
-      run:
-        working-directory: .
-    environment:
-      name: production
-      url: https://argus.codai.app
-
-    steps:
-      - uses: actions/checkout@v6
-
-      - uses: azure/setup-helm@v4
-        with:
-          version: "4.1.3"
-
-      - name: Configure kubectl (Production)
-        run: |
-          mkdir -p ~/.kube
-          echo "${{ secrets.KUBE_CONFIG_PROD }}" | base64 -d > ~/.kube/config
-
-      - name: Deploy to Production
-        run: |
-          helm upgrade --install argus ./charts/argus \
-            --namespace argus \
-            -f charts/argus/values-prod.yaml \
-            --set backend.image.tag=${{ github.ref_name }} \
-            --set frontend.image.tag=${{ github.ref_name }} \
-            --atomic \
-            --timeout 10m
