@@ -1,11 +1,5 @@
-# =============================================================================
-# crawler/backend_client.py
-# =============================================================================
-# All HTTP calls from the crawler to the backend go through this class.
-# Keeps the runner and fetcher clean — they never touch httpx directly.
-# =============================================================================
-
 import base64
+import time
 
 import httpx
 import structlog
@@ -16,17 +10,53 @@ log = structlog.get_logger()
 class BackendClient:
     """HTTP client for communicating with the Argus backend API."""
 
-    def __init__(self, base_url: str, api_token: str):
+    def __init__(
+        self,
+        base_url: str,
+        api_token: str = "",
+        keycloak_url: str = "",
+        keycloak_client_id: str = "",
+        keycloak_client_secret: str = "",
+    ):
         self.base_url = base_url.rstrip("/")
-        self.client = httpx.AsyncClient(
-            base_url=self.base_url,
-            headers={"Authorization": f"Bearer {api_token}"},
-            timeout=30.0,
+        self._keycloak_token_url = (
+            f"{keycloak_url}/protocol/openid-connect/token" if keycloak_url else ""
         )
+        self._client_id = keycloak_client_id
+        self._client_secret = keycloak_client_secret
+        self._static_token = api_token
+        self._access_token: str = ""
+        self._token_expires_at: float = 0
+        self.client = httpx.AsyncClient(base_url=self.base_url, timeout=30.0)
+
+    async def _get_token(self) -> str:
+        if not self._keycloak_token_url:
+            return self._static_token
+
+        if self._access_token and time.time() < self._token_expires_at - 30:
+            return self._access_token
+
+        response = await self.client.post(
+            self._keycloak_token_url,
+            data={
+                "grant_type": "client_credentials",
+                "client_id": self._client_id,
+                "client_secret": self._client_secret,
+            },
+        )
+        response.raise_for_status()
+        data = response.json()
+        self._access_token = data["access_token"]
+        self._token_expires_at = time.time() + data.get("expires_in", 300)
+        log.info("Obtained service account token", expires_in=data.get("expires_in"))
+        return self._access_token
+
+    async def _headers(self) -> dict[str, str]:
+        token = await self._get_token()
+        return {"Authorization": f"Bearer {token}"}
 
     async def get_active_sources(self) -> list[dict]:
-        """Fetch all active sources from GET /api/sources/."""
-        response = await self.client.get("/api/sources/")
+        response = await self.client.get("/api/sources/", headers=await self._headers())
         response.raise_for_status()
         sources = response.json()
         return [s for s in sources if s.get("is_active", True)]
@@ -38,10 +68,6 @@ class BackendClient:
         html: bytes,
         title: str | None = None,
     ) -> str:
-        """
-        Send fetched HTML to POST /api/ingest/.
-        Returns the document_id assigned by the backend.
-        """
         payload = {
             "source_id": source_id,
             "url": url,
@@ -50,16 +76,17 @@ class BackendClient:
         if title:
             payload["title"] = title
 
-        response = await self.client.post("/api/ingest/", json=payload)
+        response = await self.client.post(
+            "/api/ingest/", json=payload, headers=await self._headers()
+        )
         response.raise_for_status()
         data = response.json()
         log.info("Ingested document", document_id=data["document_id"], url=url)
         return data["document_id"]
 
     async def update_last_crawled(self, source_id: str) -> None:
-        """Update the last_crawled_at timestamp via PATCH."""
         response = await self.client.patch(
-            f"/api/sources/{source_id}/last-crawled"
+            f"/api/sources/{source_id}/last-crawled", headers=await self._headers()
         )
         response.raise_for_status()
         log.info("Updated last_crawled_at", source_id=source_id)
@@ -73,7 +100,6 @@ class BackendClient:
         duration_seconds: float,
         error_message: str | None = None,
     ) -> str | None:
-        """Report a crawl job result to POST /api/ingest/crawl-job."""
         payload = {
             "source_id": source_id,
             "status": crawl_status,
@@ -85,15 +111,20 @@ class BackendClient:
             payload["error_message"] = error_message
 
         try:
-            response = await self.client.post("/api/ingest/crawl-job", json=payload)
+            response = await self.client.post(
+                "/api/ingest/crawl-job", json=payload, headers=await self._headers()
+            )
             response.raise_for_status()
             data = response.json()
-            log.info("Reported crawl job", crawl_job_id=data["crawl_job_id"], source_id=source_id)
+            log.info(
+                "Reported crawl job",
+                crawl_job_id=data["crawl_job_id"],
+                source_id=source_id,
+            )
             return data["crawl_job_id"]
         except Exception as e:
             log.warning("Failed to report crawl job", source_id=source_id, error=str(e))
             return None
 
     async def close(self) -> None:
-        """Always close the httpx client when done."""
         await self.client.aclose()

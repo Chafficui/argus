@@ -89,6 +89,10 @@ class SourceResponse(BaseModel):
 # =============================================================================
 
 
+def is_crawler(token: TokenData) -> bool:
+    return "crawler" in token.roles
+
+
 async def get_or_create_user(token: TokenData, db: AsyncSession) -> User:
     """
     Looks up the user by their Keycloak ID.
@@ -106,7 +110,7 @@ async def get_or_create_user(token: TokenData, db: AsyncSession) -> User:
             username=token.username,
         )
         db.add(user)
-        await db.flush()  # flush assigns the ID without committing the transaction
+        await db.flush()
 
     return user
 
@@ -119,27 +123,27 @@ async def get_or_create_user(token: TokenData, db: AsyncSession) -> User:
 @router.get("/", response_model=list[SourceResponse])
 async def list_sources(
     db: AsyncSession = Depends(get_db),
-    token: TokenData = Depends(verify_token),  # ← requires valid JWT
+    token: TokenData = Depends(verify_token),
 ):
-    """List all sources for the authenticated user."""
-    user = await get_or_create_user(token, db)
-
-    # Subquery to count documents per source
+    """List all sources for the authenticated user (or all sources for the crawler)."""
     doc_count_sub = (
         select(Document.source_id, func.count(Document.id).label("document_count"))
         .group_by(Document.source_id)
         .subquery()
     )
 
-    result = await db.execute(
-        select(
-            Source,
-            func.coalesce(doc_count_sub.c.document_count, 0).label("document_count"),
-        )
-        .outerjoin(doc_count_sub, Source.id == doc_count_sub.c.source_id)
-        .where(Source.user_id == user.id)
-        .order_by(Source.created_at.desc())
-    )
+    query = select(
+        Source,
+        func.coalesce(doc_count_sub.c.document_count, 0).label("document_count"),
+    ).outerjoin(doc_count_sub, Source.id == doc_count_sub.c.source_id)
+
+    if is_crawler(token):
+        query = query.where(Source.is_active.is_(True))
+    else:
+        user = await get_or_create_user(token, db)
+        query = query.where(Source.user_id == user.id)
+
+    result = await db.execute(query.order_by(Source.created_at.desc()))
     rows = result.all()
 
     sources = []
@@ -148,7 +152,7 @@ async def list_sources(
         resp.document_count = doc_count
         sources.append(resp)
 
-    log.info("Listed sources", user_id=user.id, count=len(sources))
+    log.info("Listed sources", count=len(sources))
     return sources
 
 
@@ -303,11 +307,15 @@ async def update_last_crawled(
     token: TokenData = Depends(verify_token),
 ):
     """Update the last_crawled_at timestamp for a source. Called by the crawler after a crawl run."""
-    user = await get_or_create_user(token, db)
-
-    result = await db.execute(
-        select(Source).where(and_(Source.id == source_id, Source.user_id == user.id))
-    )
+    if is_crawler(token):
+        result = await db.execute(select(Source).where(Source.id == source_id))
+    else:
+        user = await get_or_create_user(token, db)
+        result = await db.execute(
+            select(Source).where(
+                and_(Source.id == source_id, Source.user_id == user.id)
+            )
+        )
     source = result.scalar_one_or_none()
 
     if source is None:

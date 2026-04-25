@@ -19,8 +19,16 @@ from pydantic import BaseModel
 import structlog
 
 from app.core.auth import verify_token, TokenData
+from app.api.routes.sources import is_crawler
 from app.db.database import get_db
-from app.models.models import Source, Document, DocumentStatus, CrawlJob, CrawlStatus
+from app.models.models import (
+    Source,
+    User,
+    Document,
+    DocumentStatus,
+    CrawlJob,
+    CrawlStatus,
+)
 from app.services.processor import processor
 from app.services.metrics import crawl_jobs_total, crawl_duration_seconds
 
@@ -52,22 +60,23 @@ async def ingest_document(
     Accept a fetched page from the crawler and queue it for processing.
     Returns 202 immediately — processing happens in the background.
     """
-    # Verify source exists and belongs to this user
     from app.api.routes.sources import get_or_create_user
 
-    user = await get_or_create_user(token, db)
-
-    result = await db.execute(
-        select(Source).where(
-            and_(Source.id == body.source_id, Source.user_id == user.id)
+    if is_crawler(token):
+        result = await db.execute(select(Source).where(Source.id == body.source_id))
+    else:
+        user = await get_or_create_user(token, db)
+        result = await db.execute(
+            select(Source).where(
+                and_(Source.id == body.source_id, Source.user_id == user.id)
+            )
         )
-    )
     source = result.scalar_one_or_none()
 
     if source is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Source not found or does not belong to this user",
+            detail="Source not found",
         )
 
     # Decode base64 HTML
@@ -99,9 +108,16 @@ async def ingest_document(
         url=body.url,
     )
 
-    # Process in background — the response returns immediately
+    # Resolve the owner's keycloak_id for vector store user isolation
+    if is_crawler(token):
+        owner_result = await db.execute(select(User).where(User.id == source.user_id))
+        owner = owner_result.scalar_one()
+        owner_keycloak_id = owner.keycloak_id
+    else:
+        owner_keycloak_id = user.keycloak_id
+
     background_tasks.add_task(
-        _process_in_background, doc_id, html_bytes, user.keycloak_id
+        _process_in_background, doc_id, html_bytes, owner_keycloak_id
     )
 
     return IngestResponse(document_id=doc_id, status="processing")
@@ -171,20 +187,21 @@ async def report_crawl_job(
     """Record the result of a crawl run. Called by the crawler after each source."""
     from app.api.routes.sources import get_or_create_user
 
-    user = await get_or_create_user(token, db)
-
-    # Verify source belongs to user
-    result = await db.execute(
-        select(Source).where(
-            and_(Source.id == body.source_id, Source.user_id == user.id)
+    if is_crawler(token):
+        result = await db.execute(select(Source).where(Source.id == body.source_id))
+    else:
+        user = await get_or_create_user(token, db)
+        result = await db.execute(
+            select(Source).where(
+                and_(Source.id == body.source_id, Source.user_id == user.id)
+            )
         )
-    )
     source = result.scalar_one_or_none()
 
     if source is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Source not found or does not belong to this user",
+            detail="Source not found",
         )
 
     crawl_status = (

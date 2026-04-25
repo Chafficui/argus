@@ -11,7 +11,8 @@
   "roles": {
     "realm": [
       { "name": "user", "description": "Default user role" },
-      { "name": "admin", "description": "Administrator role" }
+      { "name": "admin", "description": "Administrator role" },
+      { "name": "crawler", "description": "Service account role for the crawler" }
     ]
   },
   "clients": [
@@ -59,6 +60,30 @@
       "protocol": "openid-connect"
     },
     {
+      "clientId": "crawler-service",
+      "name": "Argus Crawler Service Account",
+      "enabled": true,
+      "publicClient": false,
+      "secret": "crawler-service-secret",
+      "serviceAccountsEnabled": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "protocol": "openid-connect",
+      "protocolMappers": [
+        {
+          "name": "argus-backend-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.custom.audience": "argus-backend",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
       "clientId": "grafana",
       "name": "Grafana",
       "enabled": true,
@@ -93,6 +118,12 @@
         }
       ],
       "realmRoles": ["user"]
+    },
+    {
+      "username": "service-account-crawler-service",
+      "enabled": true,
+      "serviceAccountClientId": "crawler-service",
+      "realmRoles": ["crawler"]
     }
   ]
 }

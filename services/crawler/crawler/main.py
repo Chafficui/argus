@@ -45,6 +45,9 @@ async def async_main():
     client = BackendClient(
         base_url=settings.backend_url,
         api_token=settings.api_token,
+        keycloak_url=settings.keycloak_url,
+        keycloak_client_id=settings.keycloak_client_id,
+        keycloak_client_secret=settings.keycloak_client_secret,
     )
     try:
         await run_scheduler(

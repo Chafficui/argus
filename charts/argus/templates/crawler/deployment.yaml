@@ -43,6 +43,16 @@ spec:
             - name: {{ $key }}
               value: {{ $val | quote }}
             {{- end }}
+            {{- range .Values.crawler.envFromSecrets }}
+            {{- $secretName := .secretName }}
+            {{- range .keys }}
+            - name: {{ . }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $secretName }}
+                  key: {{ . }}
+            {{- end }}
+            {{- end }}
           resources:
             {{- toYaml .Values.crawler.resources | nindent 12 }}
 {{- end }}

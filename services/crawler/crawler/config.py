@@ -19,9 +19,13 @@ class CrawlerSettings(BaseSettings):
     # The backend API URL — crawler sends fetched documents here for processing
     backend_url: str = "http://localhost:8000"
 
-    # Auth token for backend API — in dev any string works with bypass active,
-    # in prod this is a Keycloak service account token
+    # Static auth token — only works with dev auth bypass enabled
     api_token: str = "dev"
+
+    # Keycloak service account (used when keycloak_url is set)
+    keycloak_url: str = ""
+    keycloak_client_id: str = "crawler-service"
+    keycloak_client_secret: str = ""
 
     # Concurrency limits
     max_concurrent_pages: int = 5
