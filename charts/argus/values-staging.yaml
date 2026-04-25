@@ -138,9 +138,9 @@ minio:
   persistence:
     size: "10Gi"
 
-# -- Observability — disabled to save RAM on staging --------------------------
+# -- Observability ------------------------------------------------------------
 observability:
-  enabled: false
+  enabled: true
 
 # -- Ingress ------------------------------------------------------------------
 ingress:
