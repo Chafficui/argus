@@ -120,6 +120,22 @@
       "realmRoles": ["user"]
     },
     {
+      "username": "admin",
+      "email": "admin@argus.local",
+      "firstName": "Admin",
+      "lastName": "User",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "changeme",
+          "temporary": true
+        }
+      ],
+      "realmRoles": ["user", "admin"]
+    },
+    {
       "username": "service-account-crawler-service",
       "enabled": true,
       "serviceAccountClientId": "crawler-service",
