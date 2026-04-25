@@ -89,9 +89,13 @@ export default function Sources() {
   }, [])
 
   useEffect(() => {
-    fetchSources()
-    const interval = setInterval(fetchSources, 10_000)
-    return () => clearInterval(interval)
+    const controller = new AbortController()
+    api.get('/api/sources/', { signal: controller.signal }).then((res) => {
+      setSources(res.data)
+      setLoading(false)
+    }).catch(() => setLoading(false))
+    const id = setInterval(fetchSources, 10_000)
+    return () => { controller.abort(); clearInterval(id) }
   }, [fetchSources])
 
   const handleDelete = (id: string) => {

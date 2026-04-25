@@ -87,7 +87,9 @@ async def init_db():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
         # create_all won't add columns to existing tables — patch them here
-        await conn.execute(text(
-            "ALTER TABLE sources ADD COLUMN IF NOT EXISTS crawl_interval_minutes INTEGER DEFAULT 360"
-        ))
+        await conn.execute(
+            text(
+                "ALTER TABLE sources ADD COLUMN IF NOT EXISTS crawl_interval_minutes INTEGER DEFAULT 360"
+            )
+        )
     log.info("Database tables ready")
