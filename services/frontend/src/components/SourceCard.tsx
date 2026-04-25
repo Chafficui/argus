@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import api from '../api/client'
 import SourceTypeBadge from './SourceTypeBadge'
 import { IconExternal, IconTrash, IconClock } from './Icons'
@@ -57,22 +57,31 @@ export default function SourceCard({
   const [crawlJobs, setCrawlJobs] = useState<CrawlJob[]>([])
   const [loadingHistory, setLoadingHistory] = useState(false)
 
+  const fetchCrawlJobs = useCallback(async () => {
+    try {
+      const res = await api.get(`/api/sources/${source.id}/crawl-jobs`)
+      setCrawlJobs(res.data.slice(0, 5))
+    } catch (err) {
+      console.error('Failed to load crawl history', err)
+    }
+  }, [source.id])
+
   const loadCrawlHistory = async () => {
     if (showHistory) {
       setShowHistory(false)
       return
     }
     setLoadingHistory(true)
-    try {
-      const res = await api.get(`/api/sources/${source.id}/crawl-jobs`)
-      setCrawlJobs(res.data.slice(0, 5))
-      setShowHistory(true)
-    } catch (err) {
-      console.error('Failed to load crawl history', err)
-    } finally {
-      setLoadingHistory(false)
-    }
+    await fetchCrawlJobs()
+    setShowHistory(true)
+    setLoadingHistory(false)
   }
+
+  useEffect(() => {
+    if (!showHistory) return
+    const interval = setInterval(fetchCrawlJobs, 10_000)
+    return () => clearInterval(interval)
+  }, [showHistory, fetchCrawlJobs])
 
   const handleDelete = async () => {
     try {

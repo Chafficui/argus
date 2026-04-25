@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import api from '../api/client'
 import SourceCard from '../components/SourceCard'
 import AddSourceModal from '../components/AddSourceModal'
@@ -77,7 +77,7 @@ export default function Sources() {
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
 
-  const fetchSources = async () => {
+  const fetchSources = useCallback(async () => {
     try {
       const res = await api.get('/api/sources/')
       setSources(res.data)
@@ -86,17 +86,13 @@ export default function Sources() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
   useEffect(() => {
-    api.get('/api/sources/').then((res) => {
-      setSources(res.data)
-      setLoading(false)
-    }).catch((err) => {
-      console.error('Failed to fetch sources', err)
-      setLoading(false)
-    })
-  }, [])
+    fetchSources()
+    const interval = setInterval(fetchSources, 10_000)
+    return () => clearInterval(interval)
+  }, [fetchSources])
 
   const handleDelete = (id: string) => {
     setSources((prev) => prev.filter((s) => s.id !== id))
