@@ -120,7 +120,7 @@
       "realmRoles": ["user"]
     },
     {
-      "username": "admin",
+      "username": "argus-admin",
       "email": "admin@argus.local",
       "firstName": "Admin",
       "lastName": "User",
