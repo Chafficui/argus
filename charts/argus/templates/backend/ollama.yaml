@@ -55,7 +55,9 @@ spec:
               # Pull the model
               echo "Pulling model: {{ .Values.ollama.defaultModel }}"
               ollama pull {{ .Values.ollama.defaultModel }}
-              echo "Model ready!"
+              echo "Pulling embedding model: {{ .Values.ollama.embeddingModel }}"
+              ollama pull {{ .Values.ollama.embeddingModel }}
+              echo "Models ready!"
               # Stop the background process
               kill $OLLAMA_PID
           volumeMounts:

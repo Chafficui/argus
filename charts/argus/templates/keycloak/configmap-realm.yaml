@@ -1,0 +1,110 @@
+{{- if and .Values.keycloak.enabled .Values.keycloak.realmImport.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argus-keycloak-realm
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app.kubernetes.io/name: argus-keycloak
+    app.kubernetes.io/part-of: argus
+data:
+  argus-realm.json: |
+    {
+      "realm": "argus",
+      "enabled": true,
+      "sslRequired": "none",
+      "registrationAllowed": false,
+      "loginWithEmailAllowed": true,
+      "duplicateEmailsAllowed": false,
+      "resetPasswordAllowed": false,
+      "editUsernameAllowed": false,
+      "bruteForceProtected": false,
+      "roles": {
+        "realm": [
+          { "name": "user", "description": "Default user role" },
+          { "name": "admin", "description": "Administrator role" }
+        ]
+      },
+      "clients": [
+        {
+          "clientId": "argus-frontend",
+          "name": "Argus Frontend",
+          "enabled": true,
+          "publicClient": true,
+          "standardFlowEnabled": true,
+          "directAccessGrantsEnabled": true,
+          "redirectUris": [
+            "http://localhost:5173/*",
+            "http://localhost:80/*",
+            "http://localhost/*",
+            "https://argus.codai.app/*"
+          ],
+          "webOrigins": [
+            "http://localhost:5173",
+            "http://localhost",
+            "https://argus.codai.app"
+          ],
+          "protocol": "openid-connect",
+          "attributes": {
+            "pkce.code.challenge.method": "S256"
+          },
+          "protocolMappers": [
+            {
+              "name": "argus-backend-audience",
+              "protocol": "openid-connect",
+              "protocolMapper": "oidc-audience-mapper",
+              "consentRequired": false,
+              "config": {
+                "included.custom.audience": "argus-backend",
+                "id.token.claim": "false",
+                "access.token.claim": "true"
+              }
+            }
+          ]
+        },
+        {
+          "clientId": "argus-backend",
+          "name": "Argus Backend",
+          "enabled": true,
+          "bearerOnly": true,
+          "protocol": "openid-connect"
+        },
+        {
+          "clientId": "grafana",
+          "name": "Grafana",
+          "enabled": true,
+          "publicClient": false,
+          "secret": "grafana-client-secret",
+          "standardFlowEnabled": true,
+          "directAccessGrantsEnabled": false,
+          "redirectUris": [
+            "http://localhost:3000/login/generic_oauth",
+            "https://argus.codai.app/grafana/login/generic_oauth"
+          ],
+          "webOrigins": [
+            "http://localhost:3000",
+            "https://argus.codai.app"
+          ],
+          "protocol": "openid-connect"
+        }
+      ],
+      "users": [
+        {
+          "username": "demo",
+          "email": "demo@argus.local",
+          "firstName": "Demo",
+          "lastName": "User",
+          "enabled": true,
+          "emailVerified": true,
+          "credentials": [
+            {
+              "type": "password",
+              "value": "demo",
+              "temporary": false
+            }
+          ],
+          "realmRoles": ["user"]
+        }
+      ]
+    }
+{{- end }}

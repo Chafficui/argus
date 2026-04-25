@@ -25,6 +25,7 @@ backend:
       memory: "512Mi"
   env:
     LOG_LEVEL: "info"
+    ENVIRONMENT: "staging"
     MILVUS_HOST: "argus-milvus"
     MILVUS_PORT: "19530"
     POSTGRES_HOST: "argus-postgresql"
@@ -74,6 +75,8 @@ ollama:
 
 # -- Keycloak -----------------------------------------------------------------
 keycloak:
+  realmImport:
+    enabled: true
   httpRelativePath: "/auth/"
   auth:
     adminUser: admin

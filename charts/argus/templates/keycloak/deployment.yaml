@@ -41,6 +41,9 @@ spec:
           imagePullPolicy: {{ .Values.global.imagePullPolicy }}
           args:
             - start
+            {{- if .Values.keycloak.realmImport.enabled }}
+            - --import-realm
+            {{- end }}
           ports:
             - containerPort: 8080
               name: http
@@ -70,6 +73,12 @@ spec:
               value: "xforwarded"
             - name: KC_HEALTH_ENABLED
               value: "true"
+          {{- if .Values.keycloak.realmImport.enabled }}
+          volumeMounts:
+            - name: realm-import
+              mountPath: /opt/keycloak/data/import
+              readOnly: true
+          {{- end }}
           resources:
             {{- toYaml .Values.keycloak.resources | nindent 12 }}
           startupProbe:
@@ -87,4 +96,10 @@ spec:
             tcpSocket:
               port: 8080
             periodSeconds: 10
+      {{- if .Values.keycloak.realmImport.enabled }}
+      volumes:
+        - name: realm-import
+          configMap:
+            name: argus-keycloak-realm
+      {{- end }}
 {{- end }}

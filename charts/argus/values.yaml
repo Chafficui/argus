@@ -148,8 +148,9 @@ ollama:
   service:
     port: 11434
 
-  # The model to pull on startup
+  # Models to pull on startup
   defaultModel: "llama3.2"
+  embeddingModel: "nomic-embed-text"
 
   resources:
     requests:
@@ -190,6 +191,9 @@ keycloak:
     database: keycloak
     user: keycloak
     password: ""
+
+  realmImport:
+    enabled: true
 
   resources:
     requests:
@@ -321,6 +325,18 @@ observability:
         enabled: true
         size: "2Gi"
         storageClass: "local-path"
+
+      grafana.ini:
+        auth.generic_oauth:
+          enabled: true
+          name: Keycloak
+          client_id: grafana
+          client_secret: grafana-client-secret
+          scopes: openid profile email roles
+          auth_url: https://argus.codai.app/auth/realms/argus/protocol/openid-connect/auth
+          token_url: http://argus-keycloak:8080/auth/realms/argus/protocol/openid-connect/token
+          api_url: http://argus-keycloak:8080/auth/realms/argus/protocol/openid-connect/userinfo
+          role_attribute_path: "contains(realm_access.roles[*], 'admin') && 'Admin' || 'Viewer'"
 
       # Pre-load our custom Argus dashboard automatically
       dashboardProviders:
