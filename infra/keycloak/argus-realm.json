@@ -133,13 +133,13 @@
           "temporary": true
         }
       ],
-      "realmRoles": ["user"]
+      "realmRoles": ["user", "admin"]
     },
     {
       "username": "service-account-crawler-service",
       "enabled": true,
       "serviceAccountClientId": "crawler-service",
-      "realmRoles": ["user"]
+      "realmRoles": ["crawler"]
     }
   ]
 }

@@ -198,6 +198,9 @@ keycloak:
   realmImport:
     enabled: true
 
+  # Injected at deploy time via --set-file keycloak.realmJson=infra/keycloak/argus-realm.json
+  realmJson: "{}"
+
   resources:
     requests:
       cpu: "500m"

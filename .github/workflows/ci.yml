@@ -315,6 +315,7 @@ jobs:
             --set frontend.image.tag=sha-${SHORT_SHA} \
             --set crawler.image.tag=sha-${SHORT_SHA} \
             --set keycloak.auth.adminPassword=${{ secrets.KEYCLOAK_ADMIN_PASSWORD }} \
+            --set-file keycloak.realmJson=infra/keycloak/argus-realm.json \
             --atomic \
             --timeout 10m
 
