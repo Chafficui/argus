@@ -104,13 +104,9 @@ crawler:
     BACKEND_URL: "http://argus-backend:8000"
     KEYCLOAK_URL: "http://argus-keycloak/realms/argus"
     KEYCLOAK_CLIENT_ID: "crawler-service"
+    KEYCLOAK_CLIENT_SECRET: "crawler-service-secret"
     MAX_CONCURRENT_PAGES: "5"
     REQUEST_TIMEOUT_MS: "30000"
-
-  envFromSecrets:
-    - secretName: argus-crawler-secrets
-      keys:
-        - KEYCLOAK_CLIENT_SECRET
 
 # ----------------------------------------------------------------------------
 # FRONTEND — React app served via Nginx
