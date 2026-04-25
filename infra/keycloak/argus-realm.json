@@ -130,7 +130,7 @@
         {
           "type": "password",
           "value": "changeme",
-          "temporary": true
+          "temporary": false
         }
       ],
       "realmRoles": ["user", "admin"]
