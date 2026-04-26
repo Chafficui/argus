@@ -2,7 +2,7 @@ import { useAuth } from '../auth/useAuth'
 import { Eyebrow } from '../components/Brand'
 import { IconExternal } from '../components/Icons'
 
-const keycloakUrl = import.meta.env.VITE_KEYCLOAK_URL || 'http://localhost:8081'
+const keycloakUrl = import.meta.env.VITE_KEYCLOAK_URL || `${window.location.origin}/auth`
 
 function Card({ children }: { children: React.ReactNode }) {
   return (
