@@ -347,8 +347,8 @@ kube-prometheus-stack:
         client_secret: grafana-client-secret
         scopes: openid profile email roles
         auth_url: https://argus.codai.app/auth/realms/argus/protocol/openid-connect/auth
-        token_url: http://argus-keycloak:8080/auth/realms/argus/protocol/openid-connect/token
-        api_url: http://argus-keycloak:8080/auth/realms/argus/protocol/openid-connect/userinfo
+        token_url: http://argus-keycloak/auth/realms/argus/protocol/openid-connect/token
+        api_url: http://argus-keycloak/auth/realms/argus/protocol/openid-connect/userinfo
         role_attribute_path: "contains(realm_access.roles[*], 'admin') && 'Admin' || 'Viewer'"
 
   prometheus:
