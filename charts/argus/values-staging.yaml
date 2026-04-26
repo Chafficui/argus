@@ -141,9 +141,78 @@ minio:
   persistence:
     size: "10Gi"
 
-# -- Observability — disabled on staging (needs Prometheus CRDs installed) ----
+# -- Observability -------------------------------------------------------------
 observability:
-  enabled: false
+  enabled: true
+
+kube-prometheus-stack:
+  fullnameOverride: "argus-prometheus"
+  grafana:
+    fullnameOverride: "argus-grafana"
+    assertNoLeakedSecrets: false
+    adminPassword: "CHANGE_ME_VIA_SECRET"
+    persistence:
+      enabled: true
+      size: "2Gi"
+      storageClass: "local-path"
+    resources:
+      requests:
+        cpu: "50m"
+        memory: "128Mi"
+      limits:
+        cpu: "200m"
+        memory: "256Mi"
+    grafana.ini:
+      server:
+        root_url: "https://argus.codai.app/grafana/"
+        serve_from_sub_path: true
+      auth.generic_oauth:
+        enabled: true
+        name: Keycloak
+        client_id: grafana
+        client_secret: grafana-client-secret
+        scopes: openid profile email roles
+        auth_url: https://argus.codai.app/auth/realms/argus/protocol/openid-connect/auth
+        token_url: http://argus-keycloak:8080/auth/realms/argus/protocol/openid-connect/token
+        api_url: http://argus-keycloak:8080/auth/realms/argus/protocol/openid-connect/userinfo
+        role_attribute_path: "contains(realm_access.roles[*], 'admin') && 'Admin' || 'Viewer'"
+  prometheus:
+    prometheusSpec:
+      retention: "7d"
+      resources:
+        requests:
+          cpu: "100m"
+          memory: "256Mi"
+        limits:
+          cpu: "500m"
+          memory: "512Mi"
+      storageSpec:
+        volumeClaimTemplate:
+          spec:
+            storageClassName: "local-path"
+            accessModes: ["ReadWriteOnce"]
+            resources:
+              requests:
+                storage: "5Gi"
+  alertmanager:
+    enabled: false
+
+loki-stack:
+  loki:
+    enabled: true
+    persistence:
+      enabled: true
+      size: "5Gi"
+      storageClass: "local-path"
+    resources:
+      requests:
+        cpu: "50m"
+        memory: "128Mi"
+      limits:
+        cpu: "200m"
+        memory: "256Mi"
+  promtail:
+    enabled: true
 
 # -- Ingress ------------------------------------------------------------------
 ingress:

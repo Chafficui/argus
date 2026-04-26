@@ -134,7 +134,10 @@
         }
       ],
       "requiredActions": ["UPDATE_PASSWORD"],
-      "realmRoles": ["user", "admin"]
+      "realmRoles": ["user", "admin"],
+      "clientRoles": {
+        "realm-management": ["realm-admin"]
+      }
     },
     {
       "username": "service-account-crawler-service",

@@ -314,77 +314,77 @@ minio:
 
 # ----------------------------------------------------------------------------
 # OBSERVABILITY — Prometheus + Grafana + Loki
-# The entire monitoring stack in one block.
-# Prometheus: collects metrics (CPU, RAM, request rates, error rates...)
-# Grafana: visualizes those metrics in dashboards
-# Loki: collects and indexes logs from all services
+# Toggle that controls whether the monitoring subchart dependencies are deployed.
+# Actual subchart values live under their own top-level keys below.
 # ----------------------------------------------------------------------------
 observability:
   enabled: true
 
-  # kube-prometheus-stack settings
-  kube-prometheus-stack:
-    grafana:
+# ----------------------------------------------------------------------------
+# kube-prometheus-stack subchart values
+# (Helm requires subchart values at the top level, keyed by dependency name)
+# ----------------------------------------------------------------------------
+kube-prometheus-stack:
+  fullnameOverride: "argus-prometheus"
+  grafana:
+    enabled: true
+    fullnameOverride: "argus-grafana"
+    assertNoLeakedSecrets: false
+    adminPassword: "changeme-in-prod"
+    persistence:
       enabled: true
-      adminPassword: "changeme-in-prod"
-      persistence:
+      size: "2Gi"
+      storageClass: "local-path"
+
+    grafana.ini:
+      server:
+        root_url: "%(protocol)s://%(domain)s/grafana/"
+        serve_from_sub_path: true
+      auth.generic_oauth:
         enabled: true
-        size: "2Gi"
-        storageClass: "local-path"
+        name: Keycloak
+        client_id: grafana
+        client_secret: grafana-client-secret
+        scopes: openid profile email roles
+        auth_url: https://argus.codai.app/auth/realms/argus/protocol/openid-connect/auth
+        token_url: http://argus-keycloak:8080/auth/realms/argus/protocol/openid-connect/token
+        api_url: http://argus-keycloak:8080/auth/realms/argus/protocol/openid-connect/userinfo
+        role_attribute_path: "contains(realm_access.roles[*], 'admin') && 'Admin' || 'Viewer'"
 
-      grafana.ini:
-        auth.generic_oauth:
-          enabled: true
-          name: Keycloak
-          client_id: grafana
-          client_secret: grafana-client-secret
-          scopes: openid profile email roles
-          auth_url: https://argus.codai.app/auth/realms/argus/protocol/openid-connect/auth
-          token_url: http://argus-keycloak:8080/auth/realms/argus/protocol/openid-connect/token
-          api_url: http://argus-keycloak:8080/auth/realms/argus/protocol/openid-connect/userinfo
-          role_attribute_path: "contains(realm_access.roles[*], 'admin') && 'Admin' || 'Viewer'"
+  prometheus:
+    prometheusSpec:
+      retention: "30d"
+      resources:
+        requests:
+          cpu: "250m"
+          memory: "512Mi"
+        limits:
+          cpu: "1000m"
+          memory: "2Gi"
+      storageSpec:
+        volumeClaimTemplate:
+          spec:
+            storageClassName: "local-path"
+            accessModes: ["ReadWriteOnce"]
+            resources:
+              requests:
+                storage: "20Gi"
 
-      # Pre-load our custom Argus dashboard automatically
-      dashboardProviders:
-        dashboardproviders.yaml:
-          apiVersion: 1
-          providers:
-            - name: argus
-              orgId: 1
-              folder: Argus
-              type: file
-              options:
-                path: /var/lib/grafana/dashboards/argus
+  alertmanager:
+    enabled: false
 
-    prometheus:
-      prometheusSpec:
-        retention: "30d"  # Keep 30 days of metrics history
-        resources:
-          requests:
-            cpu: "250m"
-            memory: "512Mi"
-          limits:
-            cpu: "1000m"
-            memory: "2Gi"
-        storageSpec:
-          volumeClaimTemplate:
-            spec:
-              storageClassName: "local-path"
-              accessModes: ["ReadWriteOnce"]
-              resources:
-                requests:
-                  storage: "20Gi"
-
-  # Loki settings
-  loki-stack:
-    loki:
+# ----------------------------------------------------------------------------
+# loki-stack subchart values
+# ----------------------------------------------------------------------------
+loki-stack:
+  loki:
+    enabled: true
+    persistence:
       enabled: true
-      persistence:
-        enabled: true
-        size: "10Gi"
-        storageClass: "local-path"
-    promtail:
-      enabled: true  # Promtail is the log collector — runs on every node, ships logs to Loki
+      size: "10Gi"
+      storageClass: "local-path"
+  promtail:
+    enabled: true
 
 # ----------------------------------------------------------------------------
 # INGRESS — The "front door" of the cluster
