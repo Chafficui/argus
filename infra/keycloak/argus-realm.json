@@ -133,6 +133,7 @@
           "temporary": false
         }
       ],
+      "requiredActions": ["UPDATE_PASSWORD"],
       "realmRoles": ["user", "admin"]
     },
     {

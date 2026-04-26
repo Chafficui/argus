@@ -65,7 +65,7 @@ backend:
     POSTGRES_PORT: "5432"
     POSTGRES_DB: "argus"
     MINIO_ENDPOINT: "argus-minio:9000"
-    KEYCLOAK_URL: "http://argus-keycloak/realms/argus"
+    KEYCLOAK_URL: "http://argus-keycloak/auth/realms/argus"
     OLLAMA_BASE_URL: "http://argus-ollama:11434"
 
   # Secrets are NOT stored in values.yaml directly (never commit secrets to git!)
@@ -102,7 +102,7 @@ crawler:
 
   env:
     BACKEND_URL: "http://argus-backend:8000"
-    KEYCLOAK_URL: "http://argus-keycloak/realms/argus"
+    KEYCLOAK_URL: "http://argus-keycloak/auth/realms/argus"
     KEYCLOAK_CLIENT_ID: "crawler-service"
     KEYCLOAK_CLIENT_SECRET: "crawler-service-secret"
     MAX_CONCURRENT_PAGES: "5"
