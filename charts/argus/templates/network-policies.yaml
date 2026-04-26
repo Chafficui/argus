@@ -298,7 +298,8 @@ spec:
     - to:
         - podSelector: {}
     - to:
-        - namespaceSelector: {}
+        - ipBlock:
+            cidr: 0.0.0.0/0
       ports:
         - port: 443
         - port: 6443
@@ -536,7 +537,8 @@ spec:
         - port: 3100
     # K8s API — sidecar needs to watch ConfigMaps for dashboards/datasources
     - to:
-        - namespaceSelector: {}
+        - ipBlock:
+            cidr: 0.0.0.0/0
       ports:
         - port: 443
         - port: 6443
