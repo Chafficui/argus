@@ -226,6 +226,13 @@ spec:
               app.kubernetes.io/name: argus-minio
       ports:
         - port: 9000
+    # Keycloak (for service account token)
+    - to:
+        - podSelector:
+            matchLabels:
+              app: argus-keycloak
+      ports:
+        - port: 8080
     # External internet (needs to crawl websites!)
     # In high-security environments you'd proxy this through a controlled egress
     - ports:
@@ -361,6 +368,9 @@ spec:
         - podSelector:
             matchLabels:
               app: argus-backend
+        - podSelector:
+            matchLabels:
+              app: argus-crawler
       ports:
         - port: 8080
     - from:
