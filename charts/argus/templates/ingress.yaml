@@ -53,7 +53,7 @@ spec:
               service:
                 name: argus-grafana
                 port:
-                  number: 3000
+                  number: 80
           {{- end }}
           - path: /
             pathType: Prefix
