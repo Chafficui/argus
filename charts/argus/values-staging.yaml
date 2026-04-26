@@ -176,6 +176,12 @@ kube-prometheus-stack:
         token_url: http://argus-keycloak/auth/realms/argus/protocol/openid-connect/token
         api_url: http://argus-keycloak/auth/realms/argus/protocol/openid-connect/userinfo
         role_attribute_path: "contains(realm_access.roles[*], 'admin') && 'Admin' || 'Viewer'"
+    additionalDataSources:
+      - name: Loki
+        type: loki
+        url: http://argus-loki:3100
+        access: proxy
+        isDefault: false
   prometheus:
     prometheusSpec:
       retention: "7d"
