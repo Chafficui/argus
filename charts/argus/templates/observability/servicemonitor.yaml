@@ -1,0 +1,21 @@
+{{- if .Values.observability.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: argus-backend
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app.kubernetes.io/name: argus-backend
+    release: argus
+spec:
+  selector:
+    matchLabels:
+      app: argus-backend
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 15s
+  namespaceSelector:
+    matchNames:
+      - {{ .Values.global.namespace }}
+{{- end }}
