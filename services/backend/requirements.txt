@@ -36,6 +36,6 @@ prometheus-fastapi-instrumentator==7.1.0  # Auto-generates /metrics endpoint
 
 # --- Utilities ---
 beautifulsoup4==4.14.3      # HTML parsing for document chunker
-python-multipart==0.0.26    # For file uploads
+python-multipart==0.0.27    # For file uploads
 tenacity==9.1.4             # Retry logic (e.g. retry DB connection on startup)
 structlog==25.5.0           # Structured JSON logging (better than print())
