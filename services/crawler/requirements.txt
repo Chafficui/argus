@@ -27,5 +27,5 @@ structlog==25.5.0
 schedule==1.2.2
 
 # Settings management — reads env vars and .env files
-pydantic-settings==2.13.1
+pydantic-settings==2.14.2
 pydantic==2.12.5
